@@ -4,11 +4,10 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"  // <--- ¡ESTA LÍNEA ES OBLIGATORIA!
-  url      = env("snowconnect_PRISMA_DATABASE_URL")
-  directUrl = env("snowconnect_POSTGRES_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
-
 // 3. Modelos de la Base de Datos
 
 model User {

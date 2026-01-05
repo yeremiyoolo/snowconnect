@@ -1,127 +1,87 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
-// GET - Obtener todas las ventas
-export async function GET(request: NextRequest) {
+// 1. GET: TRAER LISTA DE VENTAS
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    if (!session?.user) return NextResponse.json({ message: "No autorizado" }, { status: 401 });
 
     const ventas = await prisma.venta.findMany({
+      orderBy: { createdAt: "desc" },
       include: {
-        producto: true
+        producto: true,
+        user: { select: { name: true, email: true } }
       },
-      orderBy: { createdAt: 'desc' }
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      data: ventas,
-      count: ventas.length
-    });
-    
+    return NextResponse.json(ventas);
   } catch (error) {
-    console.error("❌ Error al obtener ventas:", error);
-    return NextResponse.json(
-      { error: "Error interno del servidor" },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Error al obtener ventas" }, { status: 500 });
   }
 }
 
-// POST - Registrar nueva venta
-export async function POST(request: NextRequest) {
-  console.log("🛒 POST /api/ventas - Registrando nueva venta...");
-  
+// 2. POST: REGISTRAR VENTA (Corregido: Costo y Margen)
+export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      console.log("❌ No autorizado - sin sesión");
-      return NextResponse.json(
-        { error: "No autorizado" },
-        { status: 401 }
-      );
-    }
+    if (!session?.user) return NextResponse.json({ message: "No autorizado" }, { status: 401 });
 
     const body = await request.json();
-    console.log("📦 Datos recibidos:", body);
     
-    // Validaciones
     if (!body.productoId) {
-      return NextResponse.json(
-        { error: "Selecciona un producto" },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "Falta el ID del producto" }, { status: 400 });
     }
 
-    // Verificar que el producto existe y está disponible
-    const producto = await prisma.producto.findUnique({
-      where: { id: body.productoId }
-    });
+    const ventaExitosa = await prisma.$transaction(async (tx) => {
+      // A. Buscar el producto
+      const producto = await tx.producto.findUnique({
+        where: { id: body.productoId },
+      });
 
-    if (!producto) {
-      return NextResponse.json(
-        { error: "Producto no encontrado" },
-        { status: 404 }
-      );
-    }
+      if (!producto) throw new Error("El producto no existe");
+      if (producto.estado === "VENDIDO") throw new Error("Producto ya vendido");
 
-    if (producto.estado === "VENDIDO") {
-      return NextResponse.json(
-        { error: "Este producto ya fue vendido" },
-        { status: 400 }
-      );
-    }
+      // B. Calcular valores
+      const precioVenta = producto.precioVenta;
+      const costo = producto.precioCompra;
+      const margen = precioVenta - costo; // <--- CÁLCULO DE GANANCIA
 
-    // TRANSACCIÓN: Crear venta + actualizar producto
-    // CORRECCIÓN AQUÍ: Agregamos ": any" para evitar el error de TypeScript en Vercel
-    const venta = await prisma.$transaction(async (tx: any) => {
-      
-      // 1. Crear registro de venta
+      // C. Crear la Venta
       const nuevaVenta = await tx.venta.create({
         data: {
           productoId: body.productoId,
-          precioVenta: producto.precioVenta,
-          cliente: body.cliente || null,
-          notas: body.notas || null,
-          userId: session.user.id // Importante: Vincular la venta al usuario que la hizo
+          cliente: body.cliente || "Cliente Final",
+          notas: body.notas || "",
+          userId: session.user.id,
+          
+          // Valores financieros obligatorios
+          precioVenta: precioVenta,
+          costo: costo,
+          margen: margen, // <--- ¡AQUÍ ESTABA EL ERROR QUE FALTABA!
         },
-        include: { producto: true }
       });
 
-      // 2. Actualizar estado del producto a VENDIDO
+      // D. Marcar producto como VENDIDO
       await tx.producto.update({
         where: { id: body.productoId },
-        data: { 
+        data: {
           estado: "VENDIDO",
-          // fechaVenta: new Date() <--- Solo descomenta esto si tienes el campo en tu schema.prisma
-        }
+          fechaVenta: new Date(),
+        },
       });
 
-      console.log("✅ Venta registrada:", nuevaVenta.id);
       return nuevaVenta;
     });
-    
-    return NextResponse.json(
-      { 
-        success: true, 
-        message: "✅ Venta registrada exitosamente",
-        data: venta
-      },
-      { status: 201 }
-    );
-    
+
+    return NextResponse.json(ventaExitosa);
+
   } catch (error: any) {
-    console.error("❌ Error al crear venta:", error);
-    
+    console.error("❌ Error venta:", error);
     return NextResponse.json(
-      { error: "Error interno del servidor" },
+      { message: error.message || "Error interno" },
       { status: 500 }
     );
   }
