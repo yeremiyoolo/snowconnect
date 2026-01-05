@@ -1,0 +1,20 @@
+
+{/* Descripción */}
+<div className="space-y-2">
+  <Label htmlFor="descripcion">Descripción (Opcional)</Label>
+  <Textarea
+    id="descripcion"
+    name="descripcion"
+    placeholder="Detalles adicionales..."
+    value={formData.descripcion}
+    onChange={handleChange}
+    rows={3}
+  />
+</div>
+
+
+{/* Fotos */}
+<div className="space-y-2">
+  <Label>Fotos del teléfono (Opcional)</Label>
+  <UploadFotos />
+</div>

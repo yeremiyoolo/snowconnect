@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  name      String?
+  password  String?
+  role      String    @default("USER")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  
+  productos Producto[]
+}
+
+model Producto {
+  id              String    @id @default(cuid())
+  imei            String    @unique
+  marca           String
+  modelo          String
+  color           String
+  almacenamiento  String
+  ram             String
+  estado          String
+  precioCompra    Float
+  precioVenta     Float
+  margen          Float
+  descripcion     String?
+  fotosJson       String?   @map("fotos")
+  fechaCompra     DateTime  @default(now())
+  fechaVenta      DateTime?
+  
+  userId          String?
+  user            User?     @relation(fields: [userId], references: [id])
+  
+  // Relación con Venta - solo un lado tiene @relation
+  venta           Venta?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@map("productos")
+}
+
+model Venta {
+  id          String   @id @default(cuid())
+  productoId  String   @unique
+  producto    Producto @relation(fields: [productoId], references: [id])
+  
+  precioVenta Float
+  cliente     String?
+  notas       String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
