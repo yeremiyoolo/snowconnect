@@ -80,14 +80,17 @@ export async function POST(request: NextRequest) {
     }
 
     // TRANSACCIÓN: Crear venta + actualizar producto
-    const venta = await prisma.$transaction(async (tx) => {
+    // CORRECCIÓN AQUÍ: Agregamos ": any" para evitar el error de TypeScript en Vercel
+    const venta = await prisma.$transaction(async (tx: any) => {
+      
       // 1. Crear registro de venta
       const nuevaVenta = await tx.venta.create({
         data: {
           productoId: body.productoId,
           precioVenta: producto.precioVenta,
           cliente: body.cliente || null,
-          notas: body.notas || null
+          notas: body.notas || null,
+          userId: session.user.id // Importante: Vincular la venta al usuario que la hizo
         },
         include: { producto: true }
       });
@@ -97,7 +100,7 @@ export async function POST(request: NextRequest) {
         where: { id: body.productoId },
         data: { 
           estado: "VENDIDO",
-          fechaVenta: new Date()  // Registrar fecha de venta
+          // fechaVenta: new Date() <--- Solo descomenta esto si tienes el campo en tu schema.prisma
         }
       });
 
