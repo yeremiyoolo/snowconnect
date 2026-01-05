@@ -3,10 +3,23 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-// GET: Obtener un solo producto (para editar)
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+// Definimos el tipo correcto para Next.js 15+
+type Props = {
+  params: Promise<{ id: string }>
+}
+
+// GET: Obtener un solo producto
+export async function GET(
+  req: NextRequest,
+  props: Props
+) {
   try {
-    const producto = await prisma.producto.findUnique({ where: { id: params.id } });
+    const params = await props.params; // ⚠️ AWAIT IMPORTANTE AQUÍ
+    
+    const producto = await prisma.producto.findUnique({ 
+      where: { id: params.id } 
+    });
+    
     if (!producto) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
     
     let fotos = [];
@@ -20,9 +33,14 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-// PUT: Editar producto existente
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+// PUT: Editar producto
+export async function PUT(
+  req: NextRequest,
+  props: Props
+) {
   try {
+    const params = await props.params; // ⚠️ AWAIT IMPORTANTE AQUÍ
+
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
@@ -58,8 +76,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 // DELETE: Borrar producto
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  req: NextRequest,
+  props: Props
+) {
   try {
+    const params = await props.params; // ⚠️ AWAIT IMPORTANTE AQUÍ
+
     const session = await getServerSession(authOptions);
     if (session?.user.role !== "ADMIN") return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
