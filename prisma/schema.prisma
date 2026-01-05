@@ -1,62 +1,77 @@
+// 1. Generador del Cliente
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider = "postgresql"  // <--- ¡ESTA LÍNEA ES OBLIGATORIA!
+  url      = env("snowconnect_PRISMA_DATABASE_URL")
+  directUrl = env("snowconnect_POSTGRES_URL")
 }
 
+// 3. Modelos de la Base de Datos
+
 model User {
-  id        String    @id @default(cuid())
-  email     String    @unique
+  id        String   @id @default(cuid())
   name      String?
-  password  String?
-  role      String    @default("USER")
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  
-  productos Producto[]
+  email     String   @unique
+  password  String
+  role      String   @default("USER") // "ADMIN" o "USER"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  productos Producto[] // Un usuario registra muchos productos
+  ventas    Venta[]    // Un usuario realiza muchas ventas
 }
 
 model Producto {
-  id              String    @id @default(cuid())
-  imei            String    @unique
-  marca           String
-  modelo          String
-  color           String
-  almacenamiento  String
-  ram             String
-  estado          String
-  precioCompra    Float
-  precioVenta     Float
-  margen          Float
-  descripcion     String?
-  fotosJson       String?   @map("fotos")
-  fechaCompra     DateTime  @default(now())
-  fechaVenta      DateTime?
+  id             String   @id @default(cuid())
+  imei           String   @unique
+  marca          String
+  modelo         String
+  color          String
+  almacenamiento String
+  ram            String
+  estado         String   @default("DISPONIBLE") // "DISPONIBLE", "VENDIDO"
   
-  userId          String?
-  user            User?     @relation(fields: [userId], references: [id])
+  // Finanzas del producto
+  precioCompra   Float
+  precioVenta    Float
+  margen         Float
   
-  // Relación con Venta - solo un lado tiene @relation
-  venta           Venta?
+  descripcion    String?
+  fotosJson      String?  @db.Text // Guardamos array de fotos como texto JSON
   
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  @@map("productos")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  fechaVenta     DateTime?
+
+  // Relación con quien lo registró
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+
+  // Relación con la venta (Un producto solo se vende una vez)
+  venta          Venta?
 }
 
 model Venta {
   id          String   @id @default(cuid())
-  productoId  String   @unique
-  producto    Producto @relation(fields: [productoId], references: [id])
-  
-  precioVenta Float
   cliente     String?
   notas       String?
   
+  // Datos financieros congelados al momento de la venta
+  precioVenta Float
+  costo       Float
+  margen      Float
+  
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+
+  // Relación con el producto vendido
+  productoId  String   @unique
+  producto    Producto @relation(fields: [productoId], references: [id])
+
+  // Relación con el vendedor (Usuario)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
 }
