@@ -1,820 +1,337 @@
-"use client";
-
-import { useEffect, useState, useRef } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { 
-  Smartphone, ArrowRight, Search, ShoppingBag, 
-  CreditCard, Truck, ShieldCheck, MapPin, ChevronRight,
-  Menu, X, Star, Battery, Camera, Cpu, Zap,
-  CheckCircle, Award, Users, Globe,
-  ChevronLeft, ChevronDown, Play, Headphones,
-  Facebook, Twitter, Instagram, Youtube
+import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { HeroBento } from "@/components/landing/hero-bento"; // 👈 Importamos el nuevo hero
+import {
+  Search,
+  ShoppingCart,
+  Menu,
+  CheckCircle2,
+  ShieldCheck,
+  Truck,
+  MessageCircle,
+  MapPin,
+  Facebook,
+  Instagram,
+  Youtube,
+  User,
+  ArrowRight // 👈 Importante: asegurado que esté aquí
 } from "lucide-react";
-import { motion, useAnimation, useInView } from "framer-motion";
 
-export default function ClaroHomePage() {
-  const [productos, setProductos] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("destacados");
-  const heroRef = useRef(null);
-  const statsRef = useRef(null);
-  const productsRef = useRef(null);
-  const heroControls = useAnimation();
-  const statsControls = useAnimation();
-  const productsControls = useAnimation();
-  
-  const isHeroInView = useInView(heroRef, { once: true });
-  const isStatsInView = useInView(statsRef, { once: true });
-  const isProductsInView = useInView(productsRef, { once: true });
+// Tu imagen de banner
+import bannerIphone from "./carr1.png";
 
-  useEffect(() => {
-    // Simulación de datos de productos
-    const mockProducts = [
-      {
-        id: 1,
-        modelo: "iPhone 16 Pro Max",
-        precioVenta: 1299,
-        estado: "Disponible",
-        categoria: "premium",
-        caracteristicas: ["6.9\" Super Retina XDR", "Cámara 48MP", "Chip A18 Pro"],
-        rating: 4.8,
-        color: "Titanio Negro"
+// Helper para parsear imagen segura
+const safeImageParse = (jsonString: string | null): string => {
+  if (!jsonString) return "/placeholder-phone.png";
+  try {
+    const parsed = JSON.parse(jsonString);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed[0] : "/placeholder-phone.png";
+  } catch (e) {
+    return "/placeholder-phone.png";
+  }
+};
+
+async function getProductos() {
+  try {
+    const productos = await prisma.producto.findMany({
+      where: { 
+        estado: { not: 'VENDIDO' } 
       },
-      {
-        id: 2,
-        modelo: "Samsung Galaxy S25 Ultra",
-        precioVenta: 1199,
-        estado: "Últimas unidades",
-        categoria: "premium",
-        caracteristicas: ["Pantalla Dynamic AMOLED 2X", "S-Pen incluido", "Cámara 200MP"],
-        rating: 4.7,
-        color: "Phantom Black"
-      },
-      {
-        id: 3,
-        modelo: "Google Pixel 9 Pro",
-        precioVenta: 999,
-        estado: "Disponible",
-        categoria: "flagship",
-        caracteristicas: ["Tensor G4", "Cámara con IA", "Actualizaciones 7 años"],
-        rating: 4.6,
-        color: "Porcelain"
-      },
-      {
-        id: 4,
-        modelo: "Xiaomi 14 Ultra",
-        precioVenta: 1099,
-        estado: "Nuevo",
-        categoria: "premium",
-        caracteristicas: ["Leica Summilux", "Snapdragon 8 Gen 3", "Batería 5000mAh"],
-        rating: 4.5,
-        color: "Ceramic White"
-      },
-      {
-        id: 5,
-        modelo: "OnePlus 12",
-        precioVenta: 899,
-        estado: "Disponible",
-        categoria: "flagship",
-        caracteristicas: ["Pantalla 2K 120Hz", "Carga 100W", "Hasselblad Camera"],
-        rating: 4.4,
-        color: "Emerald Green"
-      },
-      {
-        id: 6,
-        modelo: "Sony Xperia 1 VI",
-        precioVenta: 1399,
-        estado: "Próximamente",
-        categoria: "premium",
-        caracteristicas: ["Pantalla 4K", "Cámara para cineastas", "Audio Hi-Res"],
-        rating: 4.3,
-        color: "Platinum Silver"
-      }
-    ];
-    
-    setProductos(mockProducts);
-    setLoading(false);
-  }, []);
+      orderBy: { createdAt: "desc" },
+      take: 12,
+    });
+    return productos;
+  } catch (error) {
+    console.error("Error cargando productos:", error);
+    return [];
+  }
+}
 
-  useEffect(() => {
-    if (isHeroInView) {
-      heroControls.start("visible");
-    }
-  }, [isHeroInView, heroControls]);
-
-  useEffect(() => {
-    if (isStatsInView) {
-      statsControls.start("visible");
-    }
-  }, [isStatsInView, statsControls]);
-
-  useEffect(() => {
-    if (isProductsInView) {
-      productsControls.start("visible");
-    }
-  }, [isProductsInView, productsControls]);
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.2,
-        delayChildren: 0.3
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 100
-      }
-    }
-  };
-
-  const fadeInUp = {
-    hidden: { y: 60, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        duration: 0.6,
-        ease: "easeOut"
-      }
-    }
-  };
+export default async function SnowConnectPage() {
+  const productos = await getProductos();
+  const session = await getServerSession(authOptions);
+  // Iniciales del usuario para el avatar
+  const userInitials = session?.user?.name?.[0]?.toUpperCase() || "U";
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white font-sans antialiased text-gray-900 overflow-x-hidden">
+    // Cambiamos el fondo a un blanco/gris muy sutil premium
+    <div className="min-h-screen bg-[#FBFBFD] font-sans text-gray-900 selection:bg-blue-100 selection:text-blue-900 pb-10">
       
-      {/* Barra superior de utilidad */}
-      <div className="bg-gradient-to-r from-gray-900 to-black text-white hidden md:block">
-        <div className="max-w-8xl mx-auto px-8 py-3 flex justify-between items-center">
-          <div className="flex items-center gap-6 text-xs font-medium">
-            <div className="flex items-center gap-2">
-              <Headphones size={14} />
-              <span>Soporte 24/7: 800-900-1234</span>
+      {/* --- PREMIUM NAVBAR --- */}
+      <nav className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-2xl border-b border-gray-200/50 supports-[backdrop-filter]:bg-white/60 transition-all">
+        <div className="max-w-[1440px] mx-auto px-6 xl:px-8 h-[72px] flex items-center justify-between">
+          
+          {/* Logo Premium */}
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="relative w-10 h-10 overflow-hidden rounded-xl border border-gray-100 shadow-sm group-hover:shadow-md transition-all duration-300">
+              <Image src="/logo.png" alt="SnowConnect" fill className="object-cover scale-110" />
             </div>
-            <div className="flex items-center gap-2">
-              <Truck size={14} />
-              <span>Envío express en 24h</span>
+            <div className="flex flex-col leading-none">
+              <span className="text-lg font-black tracking-tight text-gray-900 uppercase">
+                Snow<span className="text-gray-400">Connect</span>
+              </span>
             </div>
-          </div>
-          <div className="flex items-center gap-6 text-xs">
-            <Link href="#" className="hover:text-red-400 transition-colors">Seguimiento de pedido</Link>
-            <Link href="#" className="hover:text-red-400 transition-colors">Sucursales</Link>
-            <div className="flex items-center gap-4">
-              <Facebook size={14} className="cursor-pointer hover:text-red-400 transition-colors" />
-              <Twitter size={14} className="cursor-pointer hover:text-red-400 transition-colors" />
-              <Instagram size={14} className="cursor-pointer hover:text-red-400 transition-colors" />
-              <Youtube size={14} className="cursor-pointer hover:text-red-400 transition-colors" />
-            </div>
-          </div>
-        </div>
-      </div>
+          </Link>
 
-      {/* Navegación principal */}
-      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">
-        <div className="max-w-8xl mx-auto px-8 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-12">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-3 group">
-              <div className="relative">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#DA291C] to-red-700 rounded-2xl flex items-center justify-center shadow-lg shadow-red-200 group-hover:shadow-red-300 transition-all duration-300">
-                  <Smartphone className="text-white w-7 h-7" />
-                </div>
-                <div className="absolute -top-1 -right-1 w-5 h-5 bg-black rounded-full flex items-center justify-center">
-                  <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
-                </div>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-2xl font-black tracking-tighter italic leading-none">MOBILE<span className="text-[#DA291C]">CLARO</span></span>
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">TECHNOLOGY</span>
-              </div>
-            </Link>
-
-            {/* Navegación desktop */}
-            <div className="hidden xl:flex gap-10">
-              {["Inicio", "Equipos", "Planes", "Accesorios", "Ofertas", "Empresas"].map((item, idx) => (
-                <Link 
-                  key={idx} 
-                  href="#" 
-                  className="relative text-sm font-bold text-gray-700 hover:text-[#DA291C] transition-colors group"
-                >
-                  {item}
-                  <span className="absolute -bottom-2 left-0 w-0 h-0.5 bg-[#DA291C] group-hover:w-full transition-all duration-300"></span>
-                </Link>
-              ))}
-            </div>
+          {/* Menú Central (Estilo Cápsula) */}
+          <div className="hidden xl:flex items-center gap-1 bg-gray-100/50 p-1.5 rounded-full border border-gray-200/50">
+            {[
+              { label: "Inicio", href: "/" },
+              { label: "iPhones", href: "/catalogo?marca=Apple" },
+              { label: "Android", href: "/catalogo?marca=Samsung" },
+              { label: "Ofertas", href: "/ofertas" }
+            ].map((link) => (
+              <Link 
+                key={link.label} 
+                href={link.href}
+                className="px-5 py-2 text-xs font-bold text-gray-600 rounded-full hover:bg-white hover:text-gray-900 hover:shadow-sm transition-all duration-200"
+              >
+                {link.label}
+              </Link>
+            ))}
           </div>
 
-          {/* Acciones de navegación */}
-          <div className="flex items-center gap-6">
-            <div className="hidden lg:flex items-center relative">
-              <Search className="absolute left-4 w-4 h-4 text-gray-400" />
-              <input 
-                type="text" 
-                placeholder="Buscar equipo, modelo, marca..." 
-                className="pl-12 pr-4 py-3 bg-gray-100 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-red-200 w-64 transition-all"
-              />
-            </div>
-            
-            <button className="hidden lg:block relative p-2 text-gray-700 hover:text-[#DA291C] transition-colors">
-              <ShoppingBag size={22} />
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#DA291C] text-white text-xs font-bold rounded-full flex items-center justify-center">3</span>
+          {/* Iconos Derecha */}
+          <div className="flex items-center gap-2">
+            <button className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors">
+              <Search size={18} strokeWidth={2} />
             </button>
-            
-            <Link 
-              href="/auth/login" 
-              className="hidden md:flex items-center gap-3 bg-gradient-to-r from-gray-900 to-black text-white px-6 py-3 rounded-2xl text-sm font-bold hover:shadow-lg hover:shadow-gray-300 transition-all duration-300"
+
+            <Link
+              href="/carrito"
+              className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors relative"
             >
-              <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-[#DA291C] rounded-full flex items-center justify-center">
-                <span className="text-xs font-bold">MC</span>
-              </div>
-              <span>Mi Cuenta</span>
+              <ShoppingCart size={18} strokeWidth={2} />
+              <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-red-500 rounded-full ring-2 ring-white" />
             </Link>
             
-            {/* Menú móvil */}
-            <button 
-              className="xl:hidden p-2 text-gray-700"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            {session?.user ? (
+              <Link href="/admin" className="ml-2 pl-1 pr-3 py-1 flex items-center gap-2 rounded-full bg-gray-50 border border-gray-200 hover:border-blue-200 hover:bg-blue-50 transition-all group">
+                 <div className="w-7 h-7 rounded-full bg-gray-900 text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                    {userInitials}
+                 </div>
+                 <span className="text-xs font-bold text-gray-700 group-hover:text-blue-700 hidden sm:inline-block">Mi Cuenta</span>
+              </Link>
+            ) : (
+              <Link 
+                href="/auth/login" 
+                className="ml-2 px-5 py-2.5 bg-gray-900 text-white rounded-full text-xs font-bold hover:bg-gray-800 transition-all shadow-lg shadow-gray-200 hover:shadow-gray-300"
+              >
+                 Ingresar
+              </Link>
+            )}
+
+            <button className="xl:hidden w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 ml-1">
+              <Menu size={20} />
             </button>
           </div>
         </div>
-
-        {/* Menú móvil expandido */}
-        {mobileMenuOpen && (
-          <motion.div 
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="xl:hidden bg-white border-t border-gray-100"
-          >
-            <div className="px-8 py-6 flex flex-col gap-6">
-              {["Inicio", "Equipos", "Planes", "Accesorios", "Ofertas", "Empresas"].map((item, idx) => (
-                <Link 
-                  key={idx} 
-                  href="#" 
-                  className="text-gray-700 font-bold hover:text-[#DA291C] transition-colors"
-                >
-                  {item}
-                </Link>
-              ))}
-              <div className="pt-4 border-t border-gray-100">
-                <div className="flex items-center gap-4">
-                  <button className="p-3 bg-gray-100 rounded-xl">
-                    <Search size={20} />
-                  </button>
-                  <button className="p-3 bg-gray-100 rounded-xl relative">
-                    <ShoppingBag size={20} />
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#DA291C] text-white text-xs font-bold rounded-full flex items-center justify-center">3</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
       </nav>
 
-      {/* Hero Section */}
-      <section ref={heroRef} className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-black to-gray-900">
-        <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-10"></div>
-        <div className="max-w-8xl mx-auto px-8 py-24 md:py-32">
-          <motion.div 
-            className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center"
-            variants={containerVariants}
-            initial="hidden"
-            animate={heroControls}
-          >
-            <motion.div className="text-white" variants={itemVariants}>
-              <motion.span 
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-red-500 to-[#DA291C] text-white text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-full mb-8"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <Zap size={14} />
-                <span>Lanzamiento exclusivo</span>
-              </motion.span>
-              
-              <motion.h1 
-                className="text-5xl md:text-7xl lg:text-8xl font-black leading-tight mb-8"
-                variants={fadeInUp}
-              >
-                <span className="bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                  EXPERIENCIA
-                </span>
-                <br />
-                <span className="bg-gradient-to-r from-red-400 to-[#DA291C] bg-clip-text text-transparent">
-                  REDEFINIDA
-                </span>
-              </motion.h1>
-              
-              <motion.p 
-                className="text-xl text-gray-300 mb-12 max-w-2xl leading-relaxed"
-                variants={fadeInUp}
-              >
-                Descubre la nueva generación de dispositivos con tecnología 5G avanzada, 
-                diseño innovador y rendimiento excepcional. Solo en MobileClaro.
-              </motion.p>
-              
-              <motion.div 
-                className="flex flex-col sm:flex-row gap-6"
-                variants={containerVariants}
-              >
-                <motion.button 
-                  className="group bg-gradient-to-r from-[#DA291C] to-red-600 text-white px-10 py-4 rounded-2xl font-bold text-lg hover:shadow-2xl hover:shadow-red-500/30 transition-all duration-300 flex items-center justify-center gap-3"
-                  variants={itemVariants}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <span>Explorar colección</span>
-                  <ArrowRight className="group-hover:translate-x-2 transition-transform" />
-                </motion.button>
-                
-                <motion.button 
-                  className="group bg-white/10 backdrop-blur-sm text-white border border-white/20 px-10 py-4 rounded-2xl font-bold text-lg hover:bg-white/20 transition-all duration-300 flex items-center justify-center gap-3"
-                  variants={itemVariants}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Play size={20} />
-                  <span>Ver demostración</span>
-                </motion.button>
-              </motion.div>
-              
-              <motion.div 
-                className="mt-16 grid grid-cols-3 gap-8"
-                variants={containerVariants}
-              >
-                {[
-                  { value: "5G", label: "Velocidad máxima" },
-                  { value: "24+", label: "Meses garantía" },
-                  { value: "4.8★", label: "Valoración" }
-                ].map((stat, idx) => (
-                  <motion.div key={idx} className="text-center" variants={itemVariants}>
-                    <div className="text-3xl font-black text-white mb-1">{stat.value}</div>
-                    <div className="text-sm text-gray-400 font-medium">{stat.label}</div>
-                  </motion.div>
-                ))}
-              </motion.div>
-            </motion.div>
-            
-            <motion.div 
-              className="relative"
-              initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
-              animate={{ opacity: 1, scale: 1, rotate: 0 }}
-              transition={{ duration: 0.8, type: "spring" }}
-            >
-              <div className="relative">
-                {/* Dispositivo flotante */}
-                <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-purple-500/20 rounded-[3rem] blur-3xl"></div>
-                
-                <div className="relative bg-gradient-to-br from-gray-800 to-black rounded-[3rem] p-8 shadow-2xl border border-gray-800">
-                  <div className="aspect-square rounded-2xl bg-gradient-to-br from-gray-900 to-black flex items-center justify-center p-12">
-                    <div className="relative">
-                      <Smartphone className="w-48 h-48 text-gray-700" />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-32 h-64 bg-gradient-to-b from-red-500/30 to-purple-500/30 rounded-3xl border border-white/10 backdrop-blur-sm"></div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Indicadores de características */}
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 flex gap-4">
-                    {[Camera, Battery, Cpu].map((Icon, idx) => (
-                      <div key={idx} className="bg-gradient-to-r from-[#DA291C] to-red-600 text-white p-3 rounded-xl shadow-lg">
-                        <Icon size={20} />
-                      </div>
-                    ))}
-                  </div>
-                  
-                  <div className="absolute -right-6 top-1/2 transform -translate-y-1/2 bg-gradient-to-b from-[#DA291C] to-red-700 text-white px-4 py-3 rounded-xl shadow-xl">
-                    <div className="text-center">
-                      <div className="text-xs font-bold">NUEVO</div>
-                      <div className="text-lg font-black">2026</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Elementos decorativos flotantes */}
-              <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-gradient-to-r from-red-500/20 to-purple-500/20 rounded-full blur-xl"></div>
-              <div className="absolute -top-6 -right-6 w-32 h-32 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-full blur-xl"></div>
-            </motion.div>
-          </motion.div>
-        </div>
+      <main className="w-full px-6 xl:px-8">
         
-        {/* Flecha de scroll */}
-        <motion.div 
-          className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-white"
-          animate={{ y: [0, 10, 0] }}
-          transition={{ repeat: Infinity, duration: 2 }}
-        >
-          <ChevronDown size={24} />
-        </motion.div>
-      </section>
-
-      {/* Sección de valor y confianza */}
-      <section className="py-20 bg-gradient-to-b from-white to-gray-50">
-        <div className="max-w-8xl mx-auto px-8">
-          <motion.div 
-            className="text-center mb-16"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <h2 className="text-4xl md:text-5xl font-black mb-6">
-              <span className="bg-gradient-to-r from-gray-900 to-[#DA291C] bg-clip-text text-transparent">
-                Más que tecnología, confianza
-              </span>
-            </h2>
-            <p className="text-gray-600 text-xl max-w-3xl mx-auto">
-              Con más de 15 años en el mercado, ofrecemos garantía, soporte premium y la mejor experiencia de compra.
-            </p>
-          </motion.div>
-          
-          <div ref={statsRef} className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-            {[
-              { icon: ShieldCheck, value: "15 años", label: "Garantía extendida", desc: "Cobertura total en todos nuestros productos" },
-              { icon: Users, value: "2M+", label: "Clientes satisfechos", desc: "Comunidad en constante crecimiento" },
-              { icon: Award, value: "Premio", label: "Excelencia 2025", desc: "Reconocidos por calidad y servicio" },
-              { icon: Globe, value: "50+", label: "Puntos de venta", desc: "Cobertura nacional e internacional" }
-            ].map((item, idx) => (
-              <motion.div 
-                key={idx}
-                className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100"
-                initial={{ opacity: 0, y: 40 }}
-                animate={statsControls}
-                variants={itemVariants}
-                whileHover={{ scale: 1.05 }}
-              >
-                <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-white rounded-2xl flex items-center justify-center mb-6 shadow-inner">
-                  <item.icon className="text-[#DA291C] w-8 h-8" />
-                </div>
-                <div className="text-3xl font-black text-gray-900 mb-2">{item.value}</div>
-                <div className="text-lg font-bold text-gray-900 mb-3">{item.label}</div>
-                <div className="text-sm text-gray-500">{item.desc}</div>
-              </motion.div>
-            ))}
-          </div>
+        {/* --- HERO SECTION (BENTO GRID) --- */}
+        <div className="max-w-[1440px] mx-auto pt-8">
+          {/* Pasamos la imagen importada como prop al componente */}
+          <HeroBento bannerImage={bannerIphone} />
         </div>
-      </section>
 
-      {/* Catálogo de productos destacados */}
-      <section ref={productsRef} className="py-24 bg-white">
-        <div className="max-w-8xl mx-auto px-8">
-          <motion.div 
-            className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-16 gap-8"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <div>
-              <h2 className="text-4xl md:text-5xl font-black mb-4">
-                <span className="bg-gradient-to-r from-gray-900 to-[#DA291C] bg-clip-text text-transparent">
-                  Colección exclusiva 2026
-                </span>
-              </h2>
-              <p className="text-gray-600 text-lg max-w-2xl">
-                Descubre los dispositivos más avanzados del mercado, con tecnología de punta y diseño premium.
-              </p>
-            </div>
-            
-            <div className="flex gap-4 bg-gray-100 p-2 rounded-2xl">
-              {["destacados", "premium", "ofertas", "nuevos"].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-6 py-3 rounded-xl font-bold text-sm capitalize transition-all ${activeTab === tab ? 'bg-white text-[#DA291C] shadow-lg' : 'text-gray-600 hover:text-gray-900'}`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-          </motion.div>
+        {/* --- GRID PRODUCTOS --- */}
+        <div className="max-w-[1440px] mx-auto py-12">
           
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {[1,2,3,4,5,6].map(i => (
-                <div key={i} className="bg-gray-100 h-[500px] rounded-3xl animate-pulse"></div>
-              ))}
+          <div className="flex items-center justify-between mb-8">
+             <h2 className="text-3xl font-black text-gray-900 tracking-tight">Recién llegados</h2>
+             <Link href="/catalogo" className="flex items-center gap-1 text-sm font-bold text-blue-600 hover:text-blue-700 hover:gap-2 transition-all">
+               Ver todo <ArrowRight size={14} />
+             </Link>
+          </div>
+
+          {productos.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 text-center bg-white rounded-[2rem] shadow-sm border border-gray-100">
+              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-6 text-gray-400">
+                <ShoppingCart size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">
+                Inventario en preparación
+              </h3>
+              <p className="text-gray-500 mb-6 max-w-md text-sm">
+                Estamos cargando los mejores equipos. Vuelve en unos minutos.
+              </p>
+              <Link
+                href="/admin"
+                className="px-6 py-3 bg-gray-900 text-white rounded-full font-bold text-xs hover:bg-gray-800 transition"
+              >
+                Panel Admin
+              </Link>
             </div>
           ) : (
-            <motion.div 
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-              variants={containerVariants}
-              initial="hidden"
-              animate={productsControls}
-            >
-              {productos.slice(0, 6).map((prod) => (
-                <motion.div 
-                  key={prod.id}
-                  className="group bg-gradient-to-b from-white to-gray-50 rounded-3xl p-8 border border-gray-200 hover:border-red-200 transition-all duration-500 hover:shadow-2xl hover:shadow-red-100 overflow-hidden relative"
-                  variants={itemVariants}
-                  whileHover={{ y: -10 }}
-                >
-                  {/* Badge de categoría */}
-                  <div className={`absolute top-6 left-6 px-4 py-1.5 rounded-full text-xs font-bold z-10 ${prod.categoria === 'premium' ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white' : 'bg-gray-900 text-white'}`}>
-                    {prod.categoria === 'premium' ? 'PREMIUM' : 'FLAGSHIP'}
-                  </div>
-                  
-                  {/* Estado de stock */}
-                  <div className={`absolute top-6 right-6 px-3 py-1 rounded-full text-xs font-bold ${prod.estado === 'Disponible' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
-                    {prod.estado}
-                  </div>
-                  
-                  {/* Imagen del producto */}
-                  <div className="aspect-square rounded-2xl bg-gradient-to-br from-gray-100 to-white flex items-center justify-center mb-8 mt-4 p-8 group-hover:scale-105 transition-transform duration-500">
-                    <div className="relative w-full h-full flex items-center justify-center">
-                      <Smartphone size={140} className="text-gray-300 group-hover:text-red-100 transition-colors duration-500" />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-24 h-48 bg-gradient-to-b from-red-500/10 to-purple-500/10 rounded-2xl border border-white/20 backdrop-blur-sm"></div>
+            // --- AQUÍ ESTÁ TU GRID EXACTO ---
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+              {productos.map((prod) => {
+                const imagen = safeImageParse(prod.fotosJson);
+                return (
+                <Link href={`/producto/${prod.id}`} key={prod.id}>
+                  <div className="bg-white rounded-[1.5rem] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300 flex flex-col items-center text-center h-full border border-gray-100 relative group cursor-pointer">
+                    
+                    <div className="w-full h-40 mb-6 flex items-center justify-center p-4 relative bg-gray-50 rounded-2xl group-hover:bg-gray-100 transition-colors">
+                      <div className="relative w-full h-full">
+                        <Image
+                          src={imagen}
+                          alt={prod.modelo}
+                          fill
+                          className="object-contain drop-shadow-sm group-hover:scale-110 transition-transform duration-500 mix-blend-multiply"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 20vw"
+                        />
                       </div>
                     </div>
-                  </div>
-                  
-                  {/* Información del producto */}
-                  <div className="mb-8">
-                    <h3 className="text-2xl font-black text-gray-900 mb-2">{prod.modelo}</h3>
-                    <p className="text-gray-500 text-sm mb-4">{prod.color}</p>
+
+                    <div className="w-full text-left mb-1">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{prod.marca}</p>
+                    </div>
                     
-                    <div className="flex items-center gap-4 mb-6">
-                      <div className="flex items-center gap-1">
-                        {[...Array(5)].map((_, i) => (
-                          <Star key={i} size={16} className={`${i < Math.floor(prod.rating) ? 'text-amber-500 fill-amber-500' : 'text-gray-300'}`} />
-                        ))}
-                        <span className="text-sm font-bold ml-2">{prod.rating}</span>
+                    <h3 className="font-bold text-gray-900 text-sm mb-3 leading-tight w-full text-left line-clamp-1">
+                      {prod.modelo}
+                    </h3>
+
+                    <div className="flex gap-2 w-full mb-4">
+                      <span className="text-[9px] font-bold px-2 py-1 rounded-md bg-green-50 text-green-700 uppercase border border-green-100">
+                        {prod.estado}
+                      </span>
+                      <span className="text-[9px] font-bold px-2 py-1 rounded-md bg-gray-50 text-gray-600 uppercase border border-gray-100">
+                        {prod.almacenamiento}
+                      </span>
+                    </div>
+
+                    <div className="flex items-end justify-between w-full mt-auto pt-3 border-t border-gray-50">
+                      <div className="text-lg font-black text-gray-900 tracking-tight">
+                        ${Number(prod.precioVenta).toLocaleString()}
+                      </div>
+                      <div className="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 duration-300">
+                         <ArrowRight size={14} />
                       </div>
                     </div>
-                    
-                    <div className="flex flex-wrap gap-2 mb-6">
-                      {prod.caracteristicas.map((caract: string, idx: number) => (
-                        <span key={idx} className="px-3 py-1.5 bg-gray-100 rounded-full text-xs font-medium text-gray-700">
-                          {caract}
-                        </span>
-                      ))}
-                    </div>
+
                   </div>
-                  
-                  {/* Precio y CTA */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-3xl font-black text-gray-900">${prod.precioVenta}</div>
-                      <div className="text-sm text-gray-500 font-medium">Precio final</div>
-                    </div>
-                    <button className="group/btn bg-gradient-to-r from-gray-900 to-black text-white px-8 py-4 rounded-2xl font-bold text-sm hover:shadow-2xl hover:shadow-gray-400/30 transition-all duration-300 flex items-center gap-3">
-                      <span>Comprar</span>
-                      <ArrowRight className="group-hover/btn:translate-x-1 transition-transform" size={18} />
-                    </button>
-                  </div>
-                  
-                  {/* Efecto de hover */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-red-500/0 via-red-500/0 to-purple-500/0 group-hover:from-red-500/5 group-hover:via-red-500/5 group-hover:to-purple-500/5 transition-all duration-700 pointer-events-none"></div>
-                </motion.div>
-              ))}
-            </motion.div>
+                </Link>
+              )})} 
+            </div>
           )}
-          
-          <motion.div 
-            className="text-center mt-16"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.4 }}
-          >
-            <Link 
-              href="/catalogo" 
-              className="inline-flex items-center gap-3 bg-gradient-to-r from-gray-900 to-black text-white px-10 py-5 rounded-2xl font-bold text-lg hover:shadow-2xl hover:shadow-gray-400/30 transition-all duration-300"
-            >
-              <span>Ver catálogo completo</span>
-              <ChevronRight className="group-hover:translate-x-2 transition-transform" />
-            </Link>
-          </motion.div>
         </div>
-      </section>
 
-      {/* Sección de beneficios */}
-      <section className="py-24 bg-gradient-to-br from-gray-50 to-white">
-        <div className="max-w-8xl mx-auto px-8">
-          <motion.div 
-            className="text-center mb-16"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <h2 className="text-4xl md:text-5xl font-black mb-6">
-              <span className="bg-gradient-to-r from-gray-900 to-[#DA291C] bg-clip-text text-transparent">
-                Tu ventaja MobileClaro
-              </span>
-            </h2>
-            <p className="text-gray-600 text-xl max-w-3xl mx-auto">
-              Ofrecemos beneficios exclusivos que hacen la diferencia en cada compra.
-            </p>
-          </motion.div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[
-              {
-                icon: Truck,
-                title: "Entrega Express",
-                desc: "Recibe tu pedido en 24-48 horas en todo el país",
-                features: ["Seguimiento en tiempo real", "Entrega premium", "Sin coste adicional"]
-              },
-              {
-                icon: CreditCard,
-                title: "Financiación",
-                desc: "Hasta 36 meses sin intereses con tarjetas participantes",
-                features: ["Aprobación inmediata", "Sin comisiones", "Flexibilidad total"]
-              },
-              {
-                icon: ShieldCheck,
-                title: "Protección Total",
-                desc: "Cobertura extendida contra daños y robos",
-                features: ["Garantía 24 meses", "Reparación express", "Seguro incluido"]
-              },
-              {
-                icon: CheckCircle,
-                title: "Experiencia Premium",
-                desc: "Servicio personalizado y soporte dedicado",
-                features: ["Asesoramiento experto", "Configuración incluida", "Soporte VIP"]
-              }
-            ].map((benefit, idx) => (
-              <motion.div 
-                key={idx}
-                className="bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-500 border border-gray-100"
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: idx * 0.1 }}
-                whileHover={{ scale: 1.03 }}
-              >
-                <div className="w-16 h-16 bg-gradient-to-br from-red-50 to-red-100 rounded-2xl flex items-center justify-center mb-6">
-                  <benefit.icon className="text-[#DA291C] w-8 h-8" />
-                </div>
-                <h3 className="text-2xl font-black text-gray-900 mb-4">{benefit.title}</h3>
-                <p className="text-gray-600 mb-6">{benefit.desc}</p>
-                <ul className="space-y-3">
-                  {benefit.features.map((feature, fIdx) => (
-                    <li key={fIdx} className="flex items-center gap-3 text-sm text-gray-700">
-                      <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
-                        <CheckCircle size={12} className="text-green-600" />
-                      </div>
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA final */}
-      <section className="py-24 bg-gradient-to-r from-gray-900 via-black to-gray-900 overflow-hidden">
-        <div className="max-w-6xl mx-auto px-8 text-center relative">
-          <div className="absolute -top-24 -right-24 w-64 h-64 bg-gradient-to-r from-red-500/20 to-purple-500/20 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-full blur-3xl"></div>
-          
-          <motion.div 
-            className="relative z-10"
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-          >
-            <h2 className="text-4xl md:text-6xl font-black text-white mb-8">
-              ¿Listo para
-              <span className="bg-gradient-to-r from-red-400 to-[#DA291C] bg-clip-text text-transparent"> cambiar </span>
-              tu experiencia?
-            </h2>
-            <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto">
-              Únete a miles de clientes que ya disfrutan de la tecnología más avanzada con el respaldo de MobileClaro.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-6 justify-center">
-              <motion.button 
-                className="group bg-gradient-to-r from-[#DA291C] to-red-600 text-white px-12 py-5 rounded-2xl font-bold text-lg hover:shadow-2xl hover:shadow-red-500/40 transition-all duration-300"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <span className="flex items-center gap-3 justify-center">
-                  Comprar ahora
-                  <ArrowRight className="group-hover:translate-x-2 transition-transform" />
-                </span>
-              </motion.button>
+        {/* --- BENEFICIOS (Limpiados y mejorados visualmente) --- */}
+        <div className="max-w-[1440px] mx-auto pb-12">
+          <div className="bg-white rounded-[1.5rem] border border-gray-100 px-8 py-10 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
               
-              <motion.button 
-                className="group bg-white/10 backdrop-blur-md text-white border border-white/30 px-12 py-5 rounded-2xl font-bold text-lg hover:bg-white/20 transition-all duration-300"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <span className="flex items-center gap-3 justify-center">
-                  <Play size={20} />
-                  Solicitar demostración
-                </span>
-              </motion.button>
-            </div>
-            
-            <p className="text-gray-400 mt-12 text-sm">
-              ¿Necesitas ayuda? Llámanos al <span className="text-white font-bold">800-900-1234</span> o escribe a <span className="text-white font-bold">soporte@mobileclaro.com</span>
-            </p>
-          </motion.div>
-        </div>
-      </section>
+              <div className="flex flex-col items-start gap-3">
+                <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center shrink-0 mb-1">
+                  <ShieldCheck size={26} className="text-blue-600 stroke-[1.5]" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-base text-gray-900">IMEI Verificado</h4>
+                  <p className="text-sm text-gray-500 mt-1">Garantizamos equipos limpios, sin reportes ni bloqueos.</p>
+                </div>
+              </div>
+              
+              <div className="flex flex-col items-start gap-3">
+                <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center shrink-0 mb-1">
+                  <CheckCircle2 size={26} className="text-green-600 stroke-[1.5]" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-base text-gray-900">Garantía Total</h4>
+                  <p className="text-sm text-gray-500 mt-1">30 días de cobertura completa directamente con nosotros.</p>
+                </div>
+              </div>
+              
+              <div className="flex flex-col items-start gap-3">
+                <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center shrink-0 mb-1">
+                  <Truck size={26} className="text-orange-600 stroke-[1.5]" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-base text-gray-900">Entrega Rápida</h4>
+                  <p className="text-sm text-gray-500 mt-1">Envíos asegurados a todo el país en 24-48 horas.</p>
+                </div>
+              </div>
+              
+              <div className="flex flex-col items-start gap-3">
+                <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center shrink-0 mb-1">
+                  <MessageCircle size={26} className="text-purple-600 stroke-[1.5]" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-base text-gray-900">Soporte VIP</h4>
+                  <p className="text-sm text-gray-500 mt-1">Atención personalizada por humanos, no bots.</p>
+                </div>
+              </div>
 
-      {/* Footer */}
-      <footer className="bg-gradient-to-b from-gray-900 to-black text-white pt-24 pb-12">
-        <div className="max-w-8xl mx-auto px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 mb-24">
-            {/* Logo y descripción */}
-            <div className="lg:col-span-2">
-              <div className="flex items-center gap-4 mb-8">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#DA291C] to-red-700 rounded-2xl flex items-center justify-center">
-                  <Smartphone className="text-white w-7 h-7" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-2xl font-black tracking-tighter italic leading-none">MOBILE<span className="text-[#DA291C]">CLARO</span></span>
-                  <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">TECHNOLOGY REDEFINED</span>
-                </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* --- FOOTER PREMIUM --- */}
+      <footer className="py-16 px-6 xl:px-8 border-t border-gray-200 bg-white mt-8">
+        <div className="max-w-[1440px] mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-start gap-12 mb-12">
+            <div className="max-w-xs">
+              <div className="flex items-center gap-3 mb-6">
+                 <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center border border-gray-100 shadow-sm overflow-hidden">
+                    <Image
+                      src="/logo.png"
+                      alt="Logo"
+                      width={40}
+                      height={40}
+                      className="object-cover scale-110"
+                    />
+                 </div>
+                 <div>
+                    <span className="text-lg font-black text-gray-900 uppercase leading-none block">
+                      SNOW<span className="text-gray-400">CONNECT</span>
+                    </span>
+                 </div>
               </div>
-              <p className="text-gray-400 mb-8 max-w-md leading-relaxed">
-                Líderes en tecnología móvil de alta gama, ofreciendo los dispositivos más avanzados con servicio premium y garantía extendida.
+              <p className="text-gray-500 text-sm font-medium leading-relaxed mb-6">
+                Redefiniendo la experiencia de comprar tecnología de segunda mano. Calidad, confianza y transparencia.
               </p>
-              <div className="flex gap-6">
-                {[Facebook, Twitter, Instagram, Youtube].map((Icon, idx) => (
-                  <div key={idx} className="w-12 h-12 bg-gray-800 rounded-2xl flex items-center justify-center hover:bg-[#DA291C] transition-colors cursor-pointer">
-                    <Icon size={20} />
-                  </div>
+              <div className="flex gap-3">
+                {[Facebook, Instagram, Youtube].map((Icon, i) => (
+                  <a key={i} href="#" className="w-10 h-10 bg-gray-50 border border-gray-100 rounded-full flex items-center justify-center cursor-pointer hover:bg-black hover:text-white transition-all text-gray-400">
+                    <Icon size={18} />
+                  </a>
                 ))}
               </div>
             </div>
-            
-            {/* Enlaces rápidos */}
-            <div>
-              <h4 className="text-lg font-black mb-8">Productos</h4>
-              <ul className="space-y-4">
-                {["Smartphones", "Tablets", "Wearables", "Accesorios", "Planes", "Ofertas"].map((link, idx) => (
-                  <li key={idx}>
-                    <Link href="#" className="text-gray-400 hover:text-white transition-colors font-medium">
-                      {link}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            
-            {/* Soporte */}
-            <div>
-              <h4 className="text-lg font-black mb-8">Soporte</h4>
-              <ul className="space-y-4">
-                {["Centro de ayuda", "Garantías", "Servicio técnico", "Preguntas frecuentes", "Estado de pedido", "Contacto"].map((link, idx) => (
-                  <li key={idx}>
-                    <Link href="#" className="text-gray-400 hover:text-white transition-colors font-medium">
-                      {link}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            
-            {/* Empresa */}
-            <div>
-              <h4 className="text-lg font-black mb-8">Empresa</h4>
-              <ul className="space-y-4">
-                {["Sobre nosotros", "Blog", "Trabaja con nosotros", "Sostenibilidad", "Términos", "Privacidad"].map((link, idx) => (
-                  <li key={idx}>
-                    <Link href="#" className="text-gray-400 hover:text-white transition-colors font-medium">
-                      {link}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+
+            <div className="grid grid-cols-2 gap-12 text-sm">
+               <div>
+                  <h4 className="font-bold text-gray-900 mb-4">Tienda</h4>
+                  <ul className="space-y-3 text-gray-500 font-medium">
+                    <li><Link href="#" className="hover:text-blue-600 transition">Smartphones</Link></li>
+                    <li><Link href="#" className="hover:text-blue-600 transition">Tablets</Link></li>
+                    <li><Link href="#" className="hover:text-blue-600 transition">Accesorios</Link></li>
+                  </ul>
+               </div>
+               <div>
+                  <h4 className="font-bold text-gray-900 mb-4">Ayuda</h4>
+                  <ul className="space-y-3 text-gray-500 font-medium">
+                    <li><Link href="#" className="hover:text-blue-600 transition">Estado de pedido</Link></li>
+                    <li><Link href="#" className="hover:text-blue-600 transition">Garantía</Link></li>
+                    <li><Link href="#" className="hover:text-blue-600 transition">Contacto</Link></li>
+                  </ul>
+               </div>
             </div>
           </div>
           
-          <div className="pt-12 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center gap-8">
-            <div className="text-gray-500 text-sm">
-              © 2026 MobileClaro Technologies. Todos los derechos reservados.
+          <div className="pt-8 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
+             <div className="flex items-center gap-2 text-xs font-bold text-gray-500 bg-gray-50 px-4 py-2 rounded-full border border-gray-100">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              Santiago de los Caballeros, RD
             </div>
-            
-            <div className="flex flex-wrap gap-8 text-sm text-gray-500">
-              <Link href="#" className="hover:text-white transition-colors">Términos de uso</Link>
-              <Link href="#" className="hover:text-white transition-colors">Política de privacidad</Link>
-              <Link href="#" className="hover:text-white transition-colors">Configuración de cookies</Link>
-              <Link href="#" className="hover:text-white transition-colors">Aviso legal</Link>
-            </div>
+            <p className="text-xs text-gray-400 font-medium">
+              © {new Date().getFullYear()} SNOWCONNECT INC.
+            </p>
           </div>
         </div>
       </footer>

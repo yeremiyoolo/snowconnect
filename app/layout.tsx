@@ -1,13 +1,18 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Providers } from "./providers";
+import { Toaster } from "@/components/ui/toaster";
+import { Providers } from "./providers"; // Asumo que esto maneja SessionProvider
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ 
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title: "Tienda de Móviles - Sistema de Gestión",
-  description: "Sistema profesional para compra y venta de teléfonos móviles",
+  title: "SnowConnect | Premium Store",
+  description: "Tecnología móvil de alta gama.",
 };
 
 export default function RootLayout({
@@ -16,10 +21,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
-      <body className={`${inter.className} bg-gray-50`}>
+    <html lang="es" className="scroll-smooth">
+      <body className={`${inter.variable} font-sans bg-background text-foreground`}>
         <Providers>
           {children}
+          <Toaster />
         </Providers>
       </body>
     </html>
