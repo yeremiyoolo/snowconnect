@@ -7,6 +7,8 @@ import {
   ArrowLeft, ShieldCheck, Truck, CreditCard, 
   Cpu, Smartphone, Database, CheckCircle2 
 } from "lucide-react";
+// Eliminé Badge si no lo usas, o mantenlo si lo tienes creado
+// import { Badge } from "@/components/ui/badge"; 
 
 // Función auxiliar para parsear fotos
 const getImages = (jsonString: string | null): string[] => {
@@ -19,18 +21,19 @@ const getImages = (jsonString: string | null): string[] => {
   }
 };
 
+// ⚠️ CAMBIO IMPORTANTE: params es una Promesa
 interface PageProps {
-  params: Promise<{ id: string }>; // <--- CAMBIO AQUÍ: Promise
+  params: Promise<{ id: string }>;
 }
 
 export default async function ProductPage(props: PageProps) {
-  // ⚠️ AWAIT IMPORTANTE
+  // ⚠️ DESEMPAQUETAR PARAMS CON AWAIT
   const params = await props.params;
 
-  // 1. Fetch de datos optimizado
+  // 1. Fetch de datos usando el ID ya resuelto
   const producto = await prisma.producto.findUnique({
     where: { id: params.id },
-    include: { user: { select: { name: true } } }
+    include: { user: { select: { name: true } } } 
   });
 
   if (!producto) {
@@ -59,11 +62,13 @@ export default async function ProductPage(props: PageProps) {
       <main className="max-w-7xl mx-auto px-6 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 xl:gap-24">
           
-          {/* Galería */}
+          {/* Galería Visual */}
           <ProductGallery images={images} />
 
-          {/* Información */}
+          {/* Información y Compra */}
           <div className="flex flex-col gap-8">
+            
+            {/* Encabezado */}
             <div className="space-y-4 border-b border-gray-100 dark:border-white/10 pb-8">
               <div className="flex items-center gap-3">
                 <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 text-xs font-bold uppercase tracking-wider">
@@ -120,6 +125,7 @@ export default async function ProductPage(props: PageProps) {
               </div>
             </div>
 
+            {/* Descripción */}
             {producto.descripcion && (
               <div className="prose prose-gray dark:prose-invert max-w-none">
                 <h3 className="text-lg font-bold mb-2">Detalles del equipo</h3>
@@ -129,6 +135,7 @@ export default async function ProductPage(props: PageProps) {
               </div>
             )}
 
+            {/* Botones */}
             <div className="flex flex-col gap-4 pt-4">
               <Button size="lg" className="w-full h-14 text-lg rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all">
                 Añadir al Carrito
@@ -138,6 +145,7 @@ export default async function ProductPage(props: PageProps) {
               </Button>
             </div>
 
+            {/* Sellos */}
             <div className="flex flex-col gap-3 pt-6 border-t border-gray-100 dark:border-white/10 text-sm text-gray-500">
               <div className="flex items-center gap-3">
                 <CheckCircle2 className="w-5 h-5 text-green-500" />

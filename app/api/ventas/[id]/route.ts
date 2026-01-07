@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
-// Definimos el tipo para Next.js 15
+// Definimos el tipo correcto para Next.js 15+
 type RouteProps = {
   params: Promise<{ id: string }>
 }
@@ -14,9 +14,9 @@ export async function PUT(
   props: RouteProps
 ) {
   try {
-    // ⚠️ AWAIT IMPORTANTE PARA NEXT.JS 15
+    // ⚠️ AWAIT OBLIGATORIO EN NEXT.JS 15
     const params = await props.params;
-
+    
     const session = await getServerSession(authOptions);
     if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json({ message: "No autorizado" }, { status: 401 });
@@ -46,7 +46,7 @@ export async function PUT(
         cliente,
         notas,
         precioVenta: parseFloat(precioVenta),
-        margen: nuevoMargen,
+        margen: nuevoMargen, 
       },
     });
 
@@ -66,7 +66,7 @@ export async function DELETE(
   props: RouteProps
 ) {
   try {
-    // ⚠️ AWAIT IMPORTANTE
+    // ⚠️ AWAIT OBLIGATORIO
     const params = await props.params;
 
     const session = await getServerSession(authOptions);
