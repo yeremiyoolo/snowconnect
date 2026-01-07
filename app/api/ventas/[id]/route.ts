@@ -3,12 +3,20 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
+// Definimos el tipo para Next.js 15
+type RouteProps = {
+  params: Promise<{ id: string }>
+}
+
 // PUT: ACTUALIZAR UNA VENTA
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  props: RouteProps
 ) {
   try {
+    // ⚠️ AWAIT IMPORTANTE PARA NEXT.JS 15
+    const params = await props.params;
+
     const session = await getServerSession(authOptions);
     if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json({ message: "No autorizado" }, { status: 401 });
@@ -38,7 +46,7 @@ export async function PUT(
         cliente,
         notas,
         precioVenta: parseFloat(precioVenta),
-        margen: nuevoMargen, // <--- Guardamos la nueva ganancia real
+        margen: nuevoMargen,
       },
     });
 
@@ -52,17 +60,18 @@ export async function PUT(
   }
 }
 
-// DELETE: BORRAR VENTA (Opcional, por si lo necesitas luego)
+// DELETE: BORRAR VENTA
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  props: RouteProps
 ) {
   try {
+    // ⚠️ AWAIT IMPORTANTE
+    const params = await props.params;
+
     const session = await getServerSession(authOptions);
     if (!session?.user || session.user.role !== "ADMIN") return NextResponse.json({}, { status: 401 });
 
-    // Al borrar una venta, deberíamos liberar el producto (volver a DISPONIBLE) ???
-    // Por seguridad, primero solo borramos el registro de venta.
     await prisma.venta.delete({
       where: { id: params.id },
     });

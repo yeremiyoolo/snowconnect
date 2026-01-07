@@ -7,9 +7,8 @@ import {
   ArrowLeft, ShieldCheck, Truck, CreditCard, 
   Cpu, Smartphone, Database, CheckCircle2 
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge"; // Asegúrate de tener este componente o usa un div estilizado
 
-// Función auxiliar para parsear fotos (igual que en el home)
+// Función auxiliar para parsear fotos
 const getImages = (jsonString: string | null): string[] => {
   if (!jsonString) return [];
   try {
@@ -21,14 +20,17 @@ const getImages = (jsonString: string | null): string[] => {
 };
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>; // <--- CAMBIO AQUÍ: Promise
 }
 
-export default async function ProductPage({ params }: PageProps) {
+export default async function ProductPage(props: PageProps) {
+  // ⚠️ AWAIT IMPORTANTE
+  const params = await props.params;
+
   // 1. Fetch de datos optimizado
   const producto = await prisma.producto.findUnique({
     where: { id: params.id },
-    include: { user: { select: { name: true } } } // Opcional: ver quién lo publicó
+    include: { user: { select: { name: true } } }
   });
 
   if (!producto) {
@@ -39,7 +41,7 @@ export default async function ProductPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-white dark:bg-black text-foreground pb-20">
-      {/* Header Minimalista para navegación rápida */}
+      {/* Header Minimalista */}
       <header className="sticky top-0 z-40 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-b border-gray-100 dark:border-white/10">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link 
@@ -57,13 +59,11 @@ export default async function ProductPage({ params }: PageProps) {
       <main className="max-w-7xl mx-auto px-6 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 xl:gap-24">
           
-          {/* COLUMNA IZQUIERDA: Galería Visual */}
+          {/* Galería */}
           <ProductGallery images={images} />
 
-          {/* COLUMNA DERECHA: Información y Compra */}
+          {/* Información */}
           <div className="flex flex-col gap-8">
-            
-            {/* Encabezado del Producto */}
             <div className="space-y-4 border-b border-gray-100 dark:border-white/10 pb-8">
               <div className="flex items-center gap-3">
                 <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 text-xs font-bold uppercase tracking-wider">
@@ -82,11 +82,10 @@ export default async function ProductPage({ params }: PageProps) {
                 <span className="text-4xl font-bold text-primary">
                   ${producto.precioVenta.toLocaleString()}
                 </span>
-                {/* Si tuvieras precio original, iría aquí tachado */}
               </div>
             </div>
 
-            {/* Grid de Especificaciones (Estilo Bento) */}
+            {/* Grid de Especificaciones */}
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-transparent hover:border-gray-200 transition-colors">
                 <div className="flex items-center gap-2 text-muted-foreground mb-2">
@@ -121,7 +120,6 @@ export default async function ProductPage({ params }: PageProps) {
               </div>
             </div>
 
-            {/* Descripción (Si existe) */}
             {producto.descripcion && (
               <div className="prose prose-gray dark:prose-invert max-w-none">
                 <h3 className="text-lg font-bold mb-2">Detalles del equipo</h3>
@@ -131,7 +129,6 @@ export default async function ProductPage({ params }: PageProps) {
               </div>
             )}
 
-            {/* Acciones de Compra (Sticky en móvil si se desea, aquí estático) */}
             <div className="flex flex-col gap-4 pt-4">
               <Button size="lg" className="w-full h-14 text-lg rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all">
                 Añadir al Carrito
@@ -141,7 +138,6 @@ export default async function ProductPage({ params }: PageProps) {
               </Button>
             </div>
 
-            {/* Sellos de Confianza */}
             <div className="flex flex-col gap-3 pt-6 border-t border-gray-100 dark:border-white/10 text-sm text-gray-500">
               <div className="flex items-center gap-3">
                 <CheckCircle2 className="w-5 h-5 text-green-500" />
