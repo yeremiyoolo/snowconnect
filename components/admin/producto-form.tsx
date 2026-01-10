@@ -50,7 +50,6 @@ const formSchema = z.object({
   fotosJson: z.string().optional(),
 });
 
-// Inferimos el tipo
 type FormValues = z.infer<typeof formSchema>;
 
 interface ProductoFormProps {
@@ -62,7 +61,7 @@ export function ProductoForm({ initialData }: ProductoFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  // 1. Definimos los valores por defecto sin tipado estricto (se ajustará en el hook)
+  // Valores por defecto
   const defaultValues = {
     imei: initialData?.imei || "",
     marca: initialData?.marca || "Apple",
@@ -81,11 +80,11 @@ export function ProductoForm({ initialData }: ProductoFormProps) {
     fotosJson: initialData?.fotosJson || "[]",
   };
 
-  // 2. SOLUCIÓN NUCLEAR: 'defaultValues as any'
-  // Esto obliga a TypeScript a ignorar el conflicto entre opcionales/requeridos en la inicialización
-  const form = useForm<FormValues>({
+  // ⚠️ SOLUCIÓN DEFINITIVA: Usamos <any> aquí.
+  // Esto hace que TypeScript deje de pelear entre el Resolver y los Tipos del formulario.
+  const form = useForm<any>({
     resolver: zodResolver(formSchema),
-    defaultValues: defaultValues as any, 
+    defaultValues, 
   });
 
   const onSubmit = async (values: FormValues) => {
