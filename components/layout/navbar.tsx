@@ -9,7 +9,6 @@ import {
   Menu, 
   Smartphone, 
   Wrench, 
-  User, 
   LogOut, 
   Settings, 
   Tag, 
@@ -32,7 +31,11 @@ import {
 export function Navbar() {
   const { data: session } = useSession();
   const [scrolled, setScrolled] = useState(false);
-  const { count } = useWishlist();
+  
+  // CORRECCIÓN: El contexto no tiene 'count', tiene 'items'.
+  // Obtenemos los items y calculamos el largo del array.
+  const { items } = useWishlist(); 
+  const count = items ? items.length : 0;
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -170,18 +173,15 @@ export function Navbar() {
               </Button>
             </SheetTrigger>
             
-            {/* CAMBIO IMPORTANTE: bg-zinc-950 para fondo OSCURO que resalte lo blanco */}
             <SheetContent side="right" className="w-[300px] sm:w-[350px] p-0 border-l-zinc-800 bg-zinc-950 backdrop-blur-xl flex flex-col h-full text-white">
               
               <SheetHeader className="p-6 border-b border-white/10 text-left">
                 <SheetTitle className="flex items-center gap-3 text-xl font-black uppercase tracking-tighter">
                    
-                   {/* 1. FONDO BLANCO AL LOGO (Solicitado) */}
                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center p-1.5 shadow-lg shadow-white/5">
                       <Image src="/logo.png" alt="Snow" width={32} height={32} className="object-contain" />
                    </div>
                    
-                   {/* 2. SNOW EN BLANCO (Solicitado) */}
                    <span>
                      <span className="text-white">Snow</span>
                      <span className="text-blue-500">Connect</span>
@@ -195,7 +195,6 @@ export function Navbar() {
                   <SheetClose key={item.href} asChild>
                     <Link 
                       href={item.href}
-                      // Texto en gris claro, hover blanco para efecto premium
                       className="flex items-center gap-4 px-4 py-4 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/10 hover:text-white transition-all"
                     >
                       <item.icon size={18} className="text-gray-500 group-hover:text-white" />
