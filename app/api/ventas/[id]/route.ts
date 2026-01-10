@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-// Definición de tipos para Next.js 15/16 (params es una Promesa)
+// 1. Definimos el tipo correcto: params es ahora una Promesa
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
@@ -14,7 +14,7 @@ export async function PUT(
   context: RouteContext
 ) {
   try {
-    // ⚠️ AWAIT OBLIGATORIO: Esperar la promesa de params
+    // 2. AWAIT OBLIGATORIO: Esperamos a que la promesa se resuelva
     const params = await context.params;
     const id = params.id;
 
@@ -26,22 +26,19 @@ export async function PUT(
     const body = await request.json();
     const { cliente, notas, precioVenta } = body;
 
-    // 1. Buscar la venta original para obtener el COSTO
+    // Buscar la venta original
     const ventaOriginal = await prisma.venta.findUnique({
       where: { id },
     });
 
     if (!ventaOriginal) {
-      return NextResponse.json(
-        { message: "Venta no encontrada" },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Venta no encontrada" }, { status: 404 });
     }
 
-    // 2. Recalcular el margen
+    // Recalcular margen
     const nuevoMargen = parseFloat(precioVenta) - ventaOriginal.costo;
 
-    // 3. Actualizar en la Base de Datos
+    // Actualizar
     const ventaActualizada = await prisma.venta.update({
       where: { id },
       data: {
@@ -68,7 +65,7 @@ export async function DELETE(
   context: RouteContext
 ) {
   try {
-    // ⚠️ AWAIT OBLIGATORIO
+    // 2. AWAIT OBLIGATORIO TAMBIÉN AQUÍ
     const params = await context.params;
     const id = params.id;
 
