@@ -8,7 +8,8 @@ interface UploadFotosProps {
   onChange: (fotos: string[]) => void
 }
 
-export default function UploadFotos({ value = [], onChange }: UploadFotosProps) {
+// CORRECCIÓN: Usamos "export function" (sin default) para que el import { UploadFotos } funcione
+export function UploadFotos({ value = [], onChange }: UploadFotosProps) {
   const [procesando, setProcesando] = useState(false)
 
   // Función para comprimir imagen
