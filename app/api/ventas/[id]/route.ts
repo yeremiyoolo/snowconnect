@@ -1,27 +1,28 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-// Definimos el tipo correcto para Next.js 15+
-type RouteProps = {
-  params: Promise<{ id: string }>
-}
+
+// Definimos el tipo correcto para las rutas dinámicas en Next.js 15+
+type RouteContext = {
+  params: Promise<{ id: string }>;
+};
 
 // PUT: ACTUALIZAR UNA VENTA
 export async function PUT(
-  request: Request,
-  props: RouteProps
+  request: NextRequest,
+  context: RouteContext
 ) {
   try {
-    // ⚠️ AWAIT OBLIGATORIO EN NEXT.JS 15
-    const params = await props.params;
-    
+    // ⚠️ Paso crítico: Esperar la promesa de params antes de leer sus propiedades
+    const params = await context.params;
+    const id = params.id;
+
     const session = await getServerSession(authOptions);
     if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json({ message: "No autorizado" }, { status: 401 });
     }
 
-    const id = params.id;
     const body = await request.json();
     const { cliente, notas, precioVenta } = body;
 
@@ -31,7 +32,10 @@ export async function PUT(
     });
 
     if (!ventaOriginal) {
-      return NextResponse.json({ message: "Venta no encontrada" }, { status: 404 });
+      return NextResponse.json(
+        { message: "Venta no encontrada" },
+        { status: 404 }
+      );
     }
 
     // 2. Recalcular el margen si cambió el precio
@@ -45,7 +49,7 @@ export async function PUT(
         cliente,
         notas,
         precioVenta: parseFloat(precioVenta),
-        margen: nuevoMargen, 
+        margen: nuevoMargen,
       },
     });
 
@@ -61,22 +65,29 @@ export async function PUT(
 
 // DELETE: BORRAR VENTA
 export async function DELETE(
-  request: Request,
-  props: RouteProps
+  request: NextRequest,
+  context: RouteContext
 ) {
   try {
-    // ⚠️ AWAIT OBLIGATORIO
-    const params = await props.params;
+    // ⚠️ Paso crítico: Esperar la promesa de params
+    const params = await context.params;
+    const id = params.id;
 
     const session = await getServerSession(authOptions);
-    if (!session?.user || session.user.role !== "ADMIN") return NextResponse.json({}, { status: 401 });
+    if (!session?.user || session.user.role !== "ADMIN") {
+      return NextResponse.json({}, { status: 401 });
+    }
 
     await prisma.venta.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: "Venta eliminada" });
   } catch (error) {
-    return NextResponse.json({ status: 500 });
+    console.error("Error eliminando venta:", error);
+    return NextResponse.json(
+      { message: "Error al eliminar la venta" },
+      { status: 500 }
+    );
   }
 }
