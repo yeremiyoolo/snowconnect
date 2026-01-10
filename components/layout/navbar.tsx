@@ -32,10 +32,9 @@ export function Navbar() {
   const { data: session } = useSession();
   const [scrolled, setScrolled] = useState(false);
   
-  // CORRECCIÓN: El contexto no tiene 'count', tiene 'items'.
-  // Obtenemos los items y calculamos el largo del array.
-  const { items } = useWishlist(); 
-  const count = items ? items.length : 0;
+  // CORRECCIÓN FINAL: Usamos el nombre real "wishlist" que vimos en tu contexto
+  const { wishlist } = useWishlist();
+  const count = wishlist.length; // Calculamos la cantidad
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
