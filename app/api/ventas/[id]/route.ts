@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-// Definimos el tipo correcto para las rutas dinámicas en Next.js 15+
+// Definición de tipos para Next.js 15/16 (params es una Promesa)
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
@@ -14,7 +14,7 @@ export async function PUT(
   context: RouteContext
 ) {
   try {
-    // ⚠️ Paso crítico: Esperar la promesa de params antes de leer sus propiedades
+    // ⚠️ AWAIT OBLIGATORIO: Esperar la promesa de params
     const params = await context.params;
     const id = params.id;
 
@@ -26,7 +26,7 @@ export async function PUT(
     const body = await request.json();
     const { cliente, notas, precioVenta } = body;
 
-    // 1. Buscar la venta original para obtener el COSTO (que no cambia)
+    // 1. Buscar la venta original para obtener el COSTO
     const ventaOriginal = await prisma.venta.findUnique({
       where: { id },
     });
@@ -38,8 +38,7 @@ export async function PUT(
       );
     }
 
-    // 2. Recalcular el margen si cambió el precio
-    // Margen = Nuevo Precio - Costo Original
+    // 2. Recalcular el margen
     const nuevoMargen = parseFloat(precioVenta) - ventaOriginal.costo;
 
     // 3. Actualizar en la Base de Datos
@@ -69,7 +68,7 @@ export async function DELETE(
   context: RouteContext
 ) {
   try {
-    // ⚠️ Paso crítico: Esperar la promesa de params
+    // ⚠️ AWAIT OBLIGATORIO
     const params = await context.params;
     const id = params.id;
 
