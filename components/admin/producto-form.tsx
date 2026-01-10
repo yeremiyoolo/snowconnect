@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
-// Importación corregida (funciona por defecto o con llaves gracias al cambio anterior)
 import UploadFotos from "@/components/upload-fotos";
 import { Button } from "@/components/ui/button";
 import {
@@ -62,9 +61,9 @@ export function ProductoForm({ initialData }: ProductoFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  // CORRECCIÓN: Definición segura de valores por defecto para evitar conflictos de tipos
-  const defaultValues: Partial<FormValues> = {
-    imei: initialData?.imei || "",
+  // CORRECCIÓN: Quitamos "Partial<FormValues>" y aseguramos que NADA sea undefined en campos obligatorios.
+  const defaultValues: FormValues = {
+    imei: initialData?.imei || "", // Si es undefined, ponemos ""
     marca: initialData?.marca || "Apple",
     modelo: initialData?.modelo || "",
     color: initialData?.color || "",
@@ -74,7 +73,7 @@ export function ProductoForm({ initialData }: ProductoFormProps) {
     precioCompra: initialData ? Number(initialData.precioCompra) : 0,
     precioVenta: initialData ? Number(initialData.precioVenta) : 0,
     precioAnterior: initialData?.precioAnterior ? Number(initialData.precioAnterior) : undefined,
-    // Lógica segura para recuperar la batería
+    // Recuperar batería de forma segura
     bateriaScore: initialData 
       ? (Number(initialData.specs?.bateriaScore) || Number(initialData.bateriaScore) || 100) 
       : 100,
@@ -84,7 +83,7 @@ export function ProductoForm({ initialData }: ProductoFormProps) {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues,
+    defaultValues, // Ahora defaultValues coincide perfectamente con el Schema
   });
 
   const onSubmit = async (values: FormValues) => {
