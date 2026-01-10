@@ -1,9 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* --- CONFIGURACIÓN DEL TEMA (Tailwind v4) --- */
 @theme inline {
-  /* Mapeamos las variables CSS a utilidades de Tailwind */
+  /* --- COLORES SEMÁNTICOS (SISTEMA SNOW) --- */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   
@@ -28,98 +27,121 @@
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   
-  --color-border: var(--border); /* ¡ESTA FALTABA! */
+  --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
   
-  --font-sans: var(--font-inter);
-  
-  /* Radios de borde personalizados */
   --radius-xl: 1.5rem;
   --radius-2xl: 2rem;
+  --radius-3xl: 3rem;
+
+  /* Animaciones Custom */
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  @keyframes shimmer {
+    from { background-position: 0 0; }
+    to { background-position: -200% 0; }
+  }
+  @keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 }
 
-/* --- VARIABLES DE COLOR (Paleta Premium) --- */
 :root {
-  /* Modo Claro - Snow Premium */
-  --background: oklch(0.985 0.002 247.858);
-  --foreground: oklch(0.145 0.005 264.695);
+  /* MODO CLARO: Blanco Polar */
+  --background: oklch(0.99 0.002 240); 
+  --foreground: oklch(0.12 0.01 260);
 
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0.005 264.695);
+  --card-foreground: oklch(0.12 0.01 260);
 
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0.005 264.695);
+  --popover-foreground: oklch(0.12 0.01 260);
 
-  --primary: oklch(0.25 0.05 260); /* Azul profundo nocturno */
-  --primary-foreground: oklch(0.985 0.002 247.858);
+  /* Primary: Azul Hielo Profundo */
+  --primary: oklch(0.45 0.22 265); 
+  --primary-foreground: oklch(1 0 0);
 
-  --secondary: oklch(0.96 0.005 260);
+  --secondary: oklch(0.97 0.005 260);
   --secondary-foreground: oklch(0.25 0.05 260);
 
-  --muted: oklch(0.96 0.005 260);
+  --muted: oklch(0.97 0.01 240);
   --muted-foreground: oklch(0.55 0.05 260);
 
-  --accent: oklch(0.94 0.01 240);
-  --accent-foreground: oklch(0.25 0.05 260);
+  --accent: oklch(0.96 0.01 240);
+  --accent-foreground: oklch(0.20 0.05 260);
 
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0.002 247.858);
+  --destructive: oklch(0.6 0.25 25);
+  --destructive-foreground: oklch(0.985 0 0);
 
-  --border: oklch(0.92 0.005 260);
-  --input: oklch(0.92 0.005 260);
-  --ring: oklch(0.25 0.05 260);
+  --border: oklch(0.94 0.01 260);
+  --input: oklch(0.94 0.01 260);
+  --ring: oklch(0.45 0.22 265);
 
-  --radius: 0.75rem;
+  --radius: 1rem;
 }
 
 .dark {
-  /* Modo Oscuro - Night Luxury */
-  --background: oklch(0.05 0.01 260);
-  --foreground: oklch(0.98 0.005 260);
+  /* MODO OSCURO: Espacio Profundo (No negro puro) */
+  --background: oklch(0.08 0.02 260); 
+  --foreground: oklch(0.98 0.01 240);
 
-  --card: oklch(0.08 0.01 260);
-  --card-foreground: oklch(0.98 0.005 260);
+  --card: oklch(0.12 0.02 260);
+  --card-foreground: oklch(0.98 0.01 240);
 
-  --popover: oklch(0.08 0.01 260);
-  --popover-foreground: oklch(0.98 0.005 260);
+  --popover: oklch(0.12 0.02 260);
+  --popover-foreground: oklch(0.98 0.01 240);
 
-  --primary: oklch(0.98 0.005 260);
-  --primary-foreground: oklch(0.05 0.01 260);
+  --primary: oklch(0.6 0.2 260);
+  --primary-foreground: oklch(0.08 0.02 260);
 
-  --secondary: oklch(0.15 0.01 260);
-  --secondary-foreground: oklch(0.98 0.005 260);
+  --secondary: oklch(0.18 0.03 260);
+  --secondary-foreground: oklch(0.98 0.01 240);
 
-  --muted: oklch(0.15 0.01 260);
-  --muted-foreground: oklch(0.65 0.05 260);
+  --muted: oklch(0.18 0.03 260);
+  --muted-foreground: oklch(0.7 0.05 260);
 
-  --accent: oklch(0.15 0.01 260);
-  --accent-foreground: oklch(0.98 0.005 260);
+  --accent: oklch(0.2 0.04 260);
+  --accent-foreground: oklch(0.98 0.01 240);
 
-  --destructive: oklch(0.4 0.15 25);
-  --destructive-foreground: oklch(0.98 0.005 260);
+  --destructive: oklch(0.5 0.2 25);
+  --destructive-foreground: oklch(0.98 0 0);
 
-  --border: oklch(0.15 0.01 260);
-  --input: oklch(0.15 0.01 260);
-  --ring: oklch(0.85 0.01 260);
+  --border: oklch(0.2 0.03 260);
+  --input: oklch(0.2 0.03 260);
+  --ring: oklch(0.6 0.2 260);
 }
 
-/* --- ESTILOS BASE Y UTILIDADES --- */
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground antialiased selection:bg-primary/10 selection:text-primary;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    @apply bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary;
+    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1; /* Fuentes más legibles */
   }
 }
 
-/* Utilidades Premium Personalizadas */
+/* --- UTILIDADES PREMIUM --- */
 @utility glass {
-  @apply bg-white/70 backdrop-blur-2xl border border-white/20 shadow-sm dark:bg-black/70 dark:border-white/5;
+  @apply bg-white/70 dark:bg-black/60 backdrop-blur-xl border border-white/40 dark:border-white/10 shadow-lg shadow-black/5;
 }
 
 @utility text-balance {
   text-wrap: balance;
+}
+
+@utility animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@utility animate-fade-in {
+  animation: fade-in-up 0.8s ease-out forwards;
+}
+
+@utility container-premium {
+  @apply max-w-[1440px] mx-auto px-6 md:px-12;
 }

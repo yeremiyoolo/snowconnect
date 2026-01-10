@@ -1,55 +1,57 @@
-// app/api/auth/register/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
 export async function POST(request: Request) {
   try {
-    const data = await request.json();
-    const { email, password, name } = data;
+    const body = await request.json();
+    const { name, email, password } = body;
 
-    // 1. Validar que lleguen los datos
+    // 1. Validar datos básicos
     if (!email || !password) {
       return NextResponse.json(
-        { message: "Faltan datos obligatorios" },
+        { message: "Email y contraseña requeridos" }, 
         { status: 400 }
       );
     }
 
-    // 2. Verificar si el usuario ya existe
-    const userFound = await prisma.user.findUnique({
-      where: {
-        email: email,
-      },
+    // --- NORMALIZACIÓN CRUCIAL ---
+    // Pasamos a minúsculas y quitamos espacios invisibles
+    const cleanEmail = email.toLowerCase().trim();
+
+    // 2. Verificar si el usuario ya existe usando el email limpio
+    const exists = await prisma.user.findUnique({ 
+      where: { email: cleanEmail } 
     });
-
-    if (userFound) {
+    
+    if (exists) {
       return NextResponse.json(
-        { message: "El correo ya está registrado" },
+        { message: "Este correo electrónico ya está registrado" }, 
         { status: 400 }
       );
     }
 
-    // 3. Encriptar la contraseña
+    // 3. CIFRAR LA CONTRASEÑA
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 4. Guardar en Base de Datos
-    const newUser = await prisma.user.create({
+    // 4. Crear usuario con datos normalizados
+    const user = await prisma.user.create({
       data: {
-        name,
-        email,
+        name: name?.trim() || "Usuario",
+        email: cleanEmail, // <--- Guardado siempre en minúsculas
         password: hashedPassword,
-        role: "USER", // Por defecto todos son USER
-      },
+        role: "USER" // Cambia a "ADMIN" manualmente en Prisma Studio si es necesario
+      }
     });
 
-    // Quitamos la contraseña de la respuesta por seguridad
-    const { password: _, ...user } = newUser;
-
-    return NextResponse.json(user);
-  } catch (error) {
     return NextResponse.json(
-      { message: "Error en el servidor", error },
+      { message: "Usuario creado exitosamente" }, 
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Error en registro:", error);
+    return NextResponse.json(
+      { message: "Error interno en el servidor" }, 
       { status: 500 }
     );
   }

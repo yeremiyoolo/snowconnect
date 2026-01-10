@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Package, Save, ArrowLeft, Loader2 } from "lucide-react"
+import { Package, Save, ArrowLeft, Loader2, Battery } from "lucide-react" // <--- Importamos Battery
 import Link from "next/link"
 import UploadFotos from "@/components/upload-fotos"
 
@@ -37,11 +37,11 @@ export default function NuevoProductoPage() {
     estado: "USADO_EXCELENTE",
     precioCompra: "",
     precioVenta: "",
+    bateria: "100", // <--- NUEVO CAMPO BATERÍA (Default 100)
     descripcion: "",
     fotos: [] as string[]
   })
 
-  // Protección de ruta para Admin
   useEffect(() => {
     if (status === "loading") return
     if (!session || session.user.role !== "ADMIN") {
@@ -65,7 +65,6 @@ export default function NuevoProductoPage() {
     setSuccess("")
 
     try {
-      // 1. Validaciones locales
       if (!formData.imei || formData.imei.length < 15) {
         throw new Error("El IMEI debe tener al menos 15 dígitos")
       }
@@ -76,9 +75,14 @@ export default function NuevoProductoPage() {
         throw new Error("El precio de compra no es válido")
       }
 
-      console.log("📤 Enviando datos...", { ...formData, fotos: `[${formData.fotos.length} imágenes]` })
+      // Validar batería
+      const bat = parseInt(formData.bateria)
+      if (isNaN(bat) || bat < 0 || bat > 100) {
+        throw new Error("El porcentaje de batería debe estar entre 0 y 100")
+      }
 
-      // 2. Enviar datos a la API
+      console.log("📤 Enviando datos...", formData)
+
       const response = await fetch("/api/productos", {
         method: "POST",
         headers: {
@@ -87,25 +91,21 @@ export default function NuevoProductoPage() {
         body: JSON.stringify(formData),
       })
 
-      // 3. Manejo seguro de la respuesta (evita el error "Unexpected end of JSON")
       let data;
-      const textResponse = await response.text(); // Leemos como texto primero
+      const textResponse = await response.text();
       
       try {
         data = textResponse ? JSON.parse(textResponse) : {}; 
       } catch (e) {
-        console.error("Error parseando JSON:", textResponse);
-        throw new Error(`Error del servidor (${response.status}). Es posible que la imagen sea muy pesada o la base de datos esté llena.`);
+        throw new Error(`Error del servidor (${response.status}).`);
       }
 
       if (!response.ok) {
         throw new Error(data.error || `Error al guardar: ${response.statusText}`)
       }
 
-      // 4. Éxito
       setSuccess(`✅ Producto creado exitosamente!`)
       
-      // Redirigir
       setTimeout(() => {
         router.push("/admin/productos")
         router.refresh()
@@ -129,7 +129,6 @@ export default function NuevoProductoPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-      {/* Header */}
       <div className="mb-6">
         <Button variant="outline" asChild className="mb-4">
           <Link href="/admin/productos">
@@ -155,7 +154,6 @@ export default function NuevoProductoPage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               
-              {/* IMEI y Marca */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="imei">IMEI *</Label>
@@ -185,7 +183,6 @@ export default function NuevoProductoPage() {
                 </div>
               </div>
 
-              {/* Modelo y Color */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="modelo">Modelo *</Label>
@@ -212,7 +209,6 @@ export default function NuevoProductoPage() {
                 </div>
               </div>
 
-              {/* Especificaciones Técnicas */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="almacenamiento">Almacenamiento</Label>
@@ -259,10 +255,10 @@ export default function NuevoProductoPage() {
                 </div>
               </div>
 
-              {/* Precios */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* --- SECCIÓN DE PRECIOS Y BATERÍA --- */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="precioCompra">Precio de Compra ($) *</Label>
+                  <Label htmlFor="precioCompra">Costo Compra ($) *</Label>
                   <Input
                     id="precioCompra"
                     name="precioCompra"
@@ -276,7 +272,7 @@ export default function NuevoProductoPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="precioVenta">Precio de Venta ($) *</Label>
+                  <Label htmlFor="precioVenta">Precio Venta ($) *</Label>
                   <Input
                     id="precioVenta"
                     name="precioVenta"
@@ -286,39 +282,58 @@ export default function NuevoProductoPage() {
                     value={formData.precioVenta}
                     onChange={handleChange}
                     required
+                    className="font-bold text-blue-600"
                   />
+                </div>
+
+                {/* --- NUEVO INPUT DE BATERÍA --- */}
+                <div className="space-y-2">
+                  <Label htmlFor="bateria" className="flex items-center gap-1 text-green-600 font-bold">
+                    <Battery className="w-4 h-4" /> Batería (%)
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="bateria"
+                      name="bateria"
+                      type="number"
+                      min="0"
+                      max="100"
+                      placeholder="100"
+                      value={formData.bateria}
+                      onChange={handleChange}
+                      className="font-bold pr-8"
+                    />
+                    <span className="absolute right-3 top-2.5 text-gray-400 font-bold">%</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Margen Calculado (Visual) */}
               {formData.precioCompra && formData.precioVenta && (
                 <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-800">
                   <strong>Margen estimado:</strong> ${ (parseFloat(formData.precioVenta) - parseFloat(formData.precioCompra)).toFixed(2) }
                 </div>
               )}
 
-              {/* Descripción */}
               <div className="space-y-2">
                 <Label htmlFor="descripcion">Descripción (Opcional)</Label>
                 <Textarea
                   id="descripcion"
                   name="descripcion"
-                  placeholder="Detalles adicionales: condición de la batería, accesorios incluidos, etc."
+                  placeholder="Detalles adicionales..."
                   value={formData.descripcion}
                   onChange={handleChange}
                   rows={3}
                 />
               </div>
 
-              {/* Componente de Fotos (Controlado) */}
               <div className="space-y-2">
+                <Label>Fotos del Producto</Label>
                 <UploadFotos 
                   value={formData.fotos} 
                   onChange={(nuevasFotos) => setFormData(prev => ({ ...prev, fotos: nuevasFotos }))} 
                 />
               </div>
 
-              {/* Mensajes de Estado */}
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
@@ -331,7 +346,6 @@ export default function NuevoProductoPage() {
                 </Alert>
               )}
 
-              {/* Botones de Acción */}
               <div className="flex gap-4 pt-4 border-t">
                 <Button 
                   type="submit" 

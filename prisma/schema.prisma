@@ -3,11 +3,13 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// 2. Configuración de la Base de Datos
 datasource db {
-  provider  = "postgresql"
+  provider  = "postgresql" // O "sqlite" si estás usando dev.db local
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
+
 // 3. Modelos de la Base de Datos
 
 model User {
@@ -16,61 +18,156 @@ model User {
   email     String   @unique
   password  String
   role      String   @default("USER") // "ADMIN" o "USER"
+  
+  // Perfil
+  image     String?
+  telefono  String?  
+  bio       String?
+  ubicacion String?
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relaciones
-  productos Producto[] // Un usuario registra muchos productos
-  ventas    Venta[]    // Un usuario realiza muchas ventas
+  productos Producto[] 
+  ventas    Venta[]    
+  logs      AuditLog[]
+  wishlist  Wishlist[]
 }
 
 model Producto {
   id             String   @id @default(cuid())
-  imei           String   @unique
+  imei           String   @unique 
   marca          String
   modelo         String
   color          String
   almacenamiento String
   ram            String
-  estado         String   @default("DISPONIBLE") // "DISPONIBLE", "VENDIDO"
+  estado         String   @default("DISPONIBLE") 
   
-  // Finanzas del producto
+  // Precios
   precioCompra   Float
   precioVenta    Float
+  precioAnterior Float?   @default(0)
+  enOferta       Boolean  @default(false)
   margen         Float
   
   descripcion    String?
-  fotosJson      String?  @db.Text // Guardamos array de fotos como texto JSON
+  fotosJson      String?  @db.Text // SQLite no soporta @db.Text, si usas SQLite quítalo
   
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   fechaVenta     DateTime?
+  fechaCompra    DateTime @default(now())
 
-  // Relación con quien lo registró
-  userId         String
+  // Relaciones
+  userId         String   
   user           User     @relation(fields: [userId], references: [id])
-
-  // Relación con la venta (Un producto solo se vende una vez)
   venta          Venta?
+
+  // --- NUEVA RELACIÓN PARA BATERÍA Y SPECS ---
+  specsId        String?                   @unique
+  specs          EspecificacionesTecnicas? @relation(fields: [specsId], references: [id])
+  
+  wishlistItems  Wishlist[]
+}
+
+// --- MODELO NUEVO: ESPECIFICACIONES TÉCNICAS ---
+model EspecificacionesTecnicas {
+  id           String    @id @default(cuid())
+  
+  // Aquí se guarda la batería
+  bateriaScore Int       @default(100) 
+  
+  // Otros scores para futuro (Cámara, Gaming)
+  camaraScore  Int       @default(50)
+  gamingScore  Int       @default(50)
+  resistencia  Int       @default(50)
+  
+  procesador   String?
+  screenHz     Int?      @default(60)
+  screenType   String?
+
+  producto     Producto?
+}
+
+model Cliente {
+  id        String   @id @default(cuid())
+  nombre    String
+  telefono  String?
+  email     String?
+  cedula    String?  
+  direccion String?
+  notas     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  compras   Venta[]
 }
 
 model Venta {
   id          String   @id @default(cuid())
-  cliente     String?
-  notas       String?
   
-  // Datos financieros congelados al momento de la venta
+  clienteId   String?  
+  clienteRel  Cliente? @relation(fields: [clienteId], references: [id])
+  cliente     String?  // Nombre rápido por si se borra el cliente
+
+  notas       String?
   precioVenta Float
   costo       Float
   margen      Float
   
   createdAt   DateTime @default(now())
 
-  // Relación con el producto vendido
   productoId  String   @unique
   producto    Producto @relation(fields: [productoId], references: [id])
 
-  // Relación con el vendedor (Usuario)
-  userId      String
+  userId      String   
   user        User     @relation(fields: [userId], references: [id])
+}
+
+model Testimonio {
+  id           String   @id @default(cuid())
+  nombre       String   
+  mensaje      String   @db.Text
+  calificacion Int      @default(5) 
+  fotoUrl      String?
+  activo       Boolean  @default(false) 
+  destacado    Boolean  @default(false) 
+  createdAt    DateTime @default(now())
+}
+
+model AlertaStock {
+  id        String   @id @default(cuid())
+  email     String?
+  telefono  String?
+  busqueda  String   
+  atendido  Boolean  @default(false) 
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  accion    String   
+  entidad   String   
+  entidadId String   
+  detalles  String   
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Wishlist {
+  id         String   @id @default(cuid())
+  
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  
+  productoId String
+  producto   Producto @relation(fields: [productoId], references: [id])
+  
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, productoId]) 
 }

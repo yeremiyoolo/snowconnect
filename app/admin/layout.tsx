@@ -1,22 +1,25 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { 
   LayoutDashboard, 
   Package, 
   ShoppingCart, 
   Users, 
   LogOut, 
-  Settings 
+  Search,
+  MessageSquare,
+  ShieldAlert // <--- NUEVO ICONO PARA AUDITORÍA
 } from "lucide-react";
+import { CommandMenu } from "@/components/admin/command-menu"; 
 
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // 1. Verificar sesión y rol
   const session = await getServerSession(authOptions);
 
   if (!session?.user || session.user.role !== "ADMIN") {
@@ -24,82 +27,103 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* --- SIDEBAR (Menú Lateral) --- */}
-      <aside className="w-64 bg-slate-900 text-white flex flex-col shadow-xl">
-        {/* Título / Logo */}
-        <div className="p-6 border-b border-slate-700">
-          <h2 className="text-2xl font-bold tracking-tight text-white">
-            SnowConnect<span className="text-blue-500">.</span>
-          </h2>
-          <p className="text-xs text-slate-400 mt-1">Panel de Administración</p>
+    // FONDO: Usamos el mismo #FBFBFD de tu landing page
+    <div className="flex min-h-screen bg-[#FBFBFD] font-sans text-gray-900">
+      
+      {/* --- SIDEBAR PREMIUM (Light) --- */}
+      <aside className="w-72 fixed inset-y-0 left-0 z-50 bg-white/80 backdrop-blur-xl border-r border-gray-100 shadow-[2px_0_20px_rgba(0,0,0,0.02)] flex flex-col">
+        
+        {/* Header del Sidebar */}
+        <div className="p-8 pb-4">
+          <Link href="/" className="flex items-center gap-3 group">
+             {/* Logo con sombra suave igual que en el home */}
+            <div className="relative w-10 h-10 overflow-hidden rounded-xl border border-gray-100 shadow-sm group-hover:shadow-md transition-all duration-300">
+              <Image src="/logo.png" alt="SnowConnect" fill className="object-cover scale-110" />
+            </div>
+            <div className="flex flex-col leading-none">
+              <span className="text-lg font-black tracking-tight text-gray-900 uppercase">
+                Snow<span className="text-gray-400">Admin</span>
+              </span>
+            </div>
+          </Link>
         </div>
 
-        {/* Enlaces de Navegación */}
-        <nav className="flex-1 p-4 space-y-2">
-          <Link 
-            href="/admin" 
-            className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-800 hover:text-blue-400 transition-colors"
-          >
-            <LayoutDashboard className="h-5 w-5" />
-            <span className="font-medium">Dashboard</span>
-          </Link>
+        {/* Navegación Estilo "Cápsula" */}
+        <nav className="flex-1 px-6 space-y-1.5 mt-6 overflow-y-auto">
+          <p className="px-4 text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Menu Principal</p>
+          
+          <SidebarItem href="/admin" icon={<LayoutDashboard size={18} />} label="Resumen" />
+          <SidebarItem href="/admin/productos" icon={<Package size={18} />} label="Inventario" />
+          <SidebarItem href="/admin/ventas" icon={<ShoppingCart size={18} />} label="Ventas" />
+          <SidebarItem href="/admin/usuarios" icon={<Users size={18} />} label="Clientes & Staff" />
 
-          <Link 
-            href="/admin/productos" 
-            className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-800 hover:text-blue-400 transition-colors"
-          >
-            <Package className="h-5 w-5" />
-            <span className="font-medium">Productos</span>
-          </Link>
+          {/* SECCIÓN MARKETING */}
+          <p className="px-4 text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 mt-6">Marketing</p>
+          <SidebarItem href="/admin/marketing/testimonios" icon={<MessageSquare size={18} />} label="Reseñas" />
 
-          <Link 
-            href="/admin/ventas" 
-            className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-800 hover:text-blue-400 transition-colors"
-          >
-            <ShoppingCart className="h-5 w-5" />
-            <span className="font-medium">Ventas</span>
-          </Link>
-
-          <Link 
-            href="/admin/usuarios" 
-            className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-800 hover:text-blue-400 transition-colors"
-          >
-            <Users className="h-5 w-5" />
-            <span className="font-medium">Usuarios</span>
-          </Link>
+          {/* SECCIÓN SEGURIDAD (AQUÍ ESTÁ TU OJO QUE TODO LO VE) */}
+          <p className="px-4 text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 mt-6">Seguridad</p>
+          <SidebarItem href="/admin/auditoria" icon={<ShieldAlert size={18} />} label="Auditoría Logs" />
         </nav>
 
-        {/* Footer del Menú */}
-        <div className="p-4 border-t border-slate-700">
+        {/* Footer del Sidebar */}
+        <div className="p-6 border-t border-gray-50">
+          <div className="bg-gray-50 rounded-2xl p-4 flex items-center gap-3 mb-4 border border-gray-100">
+             <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center font-bold text-gray-900 text-sm border border-gray-100">
+                {session.user.name?.[0] || "A"}
+             </div>
+             <div className="overflow-hidden">
+                <p className="text-sm font-bold text-gray-900 truncate">{session.user.name}</p>
+                <p className="text-xs text-gray-500 truncate">Administrador</p>
+             </div>
+          </div>
+
           <Link 
              href="/api/auth/signout"
-             className="flex items-center space-x-3 px-4 py-3 rounded-lg text-red-400 hover:bg-red-900/20 transition-colors"
+             className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-bold text-red-500 hover:bg-red-50 transition-colors"
           >
-            <LogOut className="h-5 w-5" />
-            <span>Cerrar Sesión</span>
+            <LogOut size={16} />
+            Cerrar Sesión
           </Link>
         </div>
       </aside>
 
       {/* --- CONTENIDO PRINCIPAL --- */}
-      <main className="flex-1 overflow-y-auto">
-        {/* Barra superior simple (opcional) */}
-        <header className="bg-white shadow-sm border-b px-8 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-semibold text-gray-800">Vista General</h1>
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600">Hola, {session.user.name}</span>
-            <div className="h-8 w-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">
-              {session.user.name?.[0]?.toUpperCase() || "A"}
+      <main className="flex-1 ml-72">
+        {/* Topbar Flotante */}
+        <header className="sticky top-0 z-40 bg-[#FBFBFD]/80 backdrop-blur-md px-10 py-6 flex justify-between items-center">
+            <div>
+               <h1 className="text-2xl font-black text-gray-900 tracking-tight">Panel de Control</h1>
+               <p className="text-sm text-gray-500 font-medium">Bienvenido de vuelta, {session.user.name?.split(' ')[0]}</p>
             </div>
-          </div>
+            
+            <div className="w-full max-w-md">
+                {/* Buscador Cmd+K */}
+                <div className="bg-white border border-gray-200/50 shadow-sm rounded-full px-4 py-2 flex items-center gap-2">
+                    <Search size={16} className="text-gray-400" />
+                    <div className="w-full"><CommandMenu /></div>
+                </div>
+            </div>
         </header>
 
-        {/* Aquí se inyecta lo que pusimos en page.tsx */}
-        <div className="p-8">
+        {/* Área de contenido con padding amplio */}
+        <div className="px-10 pb-10">
           {children}
         </div>
       </main>
     </div>
+  );
+}
+
+// Componente helper para links
+function SidebarItem({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
+  return (
+    <Link 
+      href={href} 
+      className="flex items-center gap-3 px-5 py-3.5 rounded-[1.2rem] text-sm font-bold text-gray-500 hover:text-gray-900 hover:bg-white hover:shadow-[0_4px_20px_-5px_rgba(0,0,0,0.05)] transition-all duration-200 group border border-transparent hover:border-gray-100"
+    >
+      <span className="text-gray-400 group-hover:text-blue-600 transition-colors group-hover:scale-110 transform duration-200">{icon}</span>
+      {label}
+    </Link>
   );
 }

@@ -3,12 +3,28 @@
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import Image from "next/image" // <--- Importante para las fotos
+import Link from "next/link"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
-import { Package, Plus, Search, Edit, Trash2, Smartphone, Filter } from "lucide-react"
-import Link from "next/link"
+import { Badge } from "@/components/ui/badge" // <--- Usamos Badge para estados
+import { 
+  Package, 
+  Plus, 
+  Search, 
+  Edit, 
+  Trash2, 
+  Smartphone, 
+  Filter, 
+  Download,
+  ImageIcon
+} from "lucide-react"
+
+// Importamos tu botón de exportar (asegúrate de haberlo creado en el paso anterior)
+import { ExportButton } from "@/components/admin/export-button"
 
 type Producto = {
   id: string
@@ -22,6 +38,7 @@ type Producto = {
   margen: number
   fechaCompra: string
   fechaVenta: string | null
+  fotosJson: string | null // <--- Agregamos este campo
 }
 
 export default function ProductosPage() {
@@ -47,8 +64,6 @@ export default function ProductosPage() {
       if (response.ok) {
         const data = await response.json()
         setProductos(data)
-      } else {
-        console.error("Error en la respuesta:", response.status)
       }
     } catch (error) {
       console.error("Error fetching productos:", error)
@@ -58,309 +73,223 @@ export default function ProductosPage() {
   }
 
   const eliminarProducto = async (id: string) => {
-    if (!confirm("¿Estás seguro de eliminar este producto? Esta acción no se puede deshacer.")) return
+    if (!confirm("¿Estás seguro? Esta acción es irreversible.")) return
     
     try {
-      const response = await fetch(`/api/productos/${id}`, {
-        method: "DELETE",
-      })
-      
+      const response = await fetch(`/api/productos/${id}`, { method: "DELETE" })
       if (response.ok) {
-        // Actualizar la lista localmente
         setProductos(productos.filter(p => p.id !== id))
-        alert("✅ Producto eliminado correctamente")
+        // Aquí podrías usar toast({ title: "Producto eliminado" }) si tienes el hook
       } else {
-        const error = await response.json()
-        alert(`❌ Error: ${error.error || "No se pudo eliminar el producto"}`)
+        alert("No se pudo eliminar")
       }
     } catch (error) {
-      console.error("Error:", error)
-      alert("❌ Error de conexión al servidor")
+      alert("Error de conexión")
+    }
+  }
+
+  // --- Lógica para obtener la primera imagen ---
+  const getImagenPrincipal = (jsonString: string | null) => {
+    if (!jsonString) return null
+    try {
+      const fotos = JSON.parse(jsonString)
+      return Array.isArray(fotos) && fotos.length > 0 ? fotos[0] : null
+    } catch {
+      return null
     }
   }
 
   const filteredProductos = productos.filter((producto) => {
+    const term = search.toLowerCase()
     const matchesSearch = 
-      producto.marca.toLowerCase().includes(search.toLowerCase()) ||
-      producto.modelo.toLowerCase().includes(search.toLowerCase()) ||
-      producto.imei.includes(search) ||
-      producto.color.toLowerCase().includes(search.toLowerCase())
+      producto.marca.toLowerCase().includes(term) ||
+      producto.modelo.toLowerCase().includes(term) ||
+      producto.imei.includes(term) ||
+      producto.color.toLowerCase().includes(term)
     
     const matchesEstado = !filterEstado || producto.estado === filterEstado
-    
     return matchesSearch && matchesEstado
   })
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-ES', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2
-    }).format(amount)
-  }
+  // Preparar datos para Excel
+  const exportData = filteredProductos.map(p => ({
+    IMEI: p.imei,
+    Marca: p.marca,
+    Modelo: p.modelo,
+    Color: p.color,
+    Estado: p.estado,
+    Costo: p.precioCompra,
+    PrecioVenta: p.precioVenta,
+    Margen: `${p.margen.toFixed(2)}%`,
+    FechaIngreso: new Date(p.fechaCompra).toLocaleDateString()
+  }))
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    })
-  }
-
-  const calcularValorTotal = () => {
-    return productos.reduce((total, producto) => total + producto.precioVenta, 0)
-  }
-
-  const calcularProductosNuevos = () => {
-    return productos.filter(p => p.estado === "NUEVO").length
-  }
-
-  if (status === "loading" || loading) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-        <div className="text-lg text-gray-600">Cargando productos...</div>
+      <div className="h-[50vh] flex flex-col items-center justify-center text-gray-400">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
+        Cargando inventario...
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto p-4 md:p-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+    <div className="space-y-6">
+      
+      {/* Header con Acciones */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-            <Package className="h-8 w-8" />
-            Productos en Inventario
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+            Inventario
+            <Badge variant="outline" className="text-gray-500 font-normal ml-2">
+              {productos.length} equipos
+            </Badge>
           </h1>
-          <p className="text-gray-600 mt-2">
-            Gestiona todos los teléfonos en stock
-          </p>
+          <p className="text-gray-500 font-medium">Gestiona tu stock en tiempo real.</p>
         </div>
-        <Button asChild className="gap-2">
-          <Link href="/admin/productos/nuevo">
-            <Plus className="h-4 w-4" />
-            Nuevo Producto
-          </Link>
-        </Button>
+        
+        <div className="flex gap-2 w-full md:w-auto">
+          {/* Botón de Exportar Integrado */}
+          <ExportButton data={exportData} filename="inventario_snowconnect" label="Excel" />
+          
+          <Button asChild className="bg-gray-900 text-white hover:bg-black shadow-lg shadow-gray-200 gap-2 w-full md:w-auto">
+            <Link href="/admin/productos/nuevo">
+              <Plus size={16} /> Nuevo Producto
+            </Link>
+          </Button>
+        </div>
       </div>
 
-      {/* Filtros y Búsqueda */}
-      <Card className="mb-6">
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Buscar por marca, modelo, color o IMEI..."
-                className="pl-10"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button 
-                variant={filterEstado === "" ? "default" : "outline"}
-                onClick={() => setFilterEstado("")}
-              >
-                Todos ({productos.length})
-              </Button>
-              <Button 
-                variant={filterEstado === "NUEVO" ? "default" : "outline"}
-                onClick={() => setFilterEstado("NUEVO")}
-              >
-                Nuevos ({productos.filter(p => p.estado === "NUEVO").length})
-              </Button>
-              <Button 
-                variant={filterEstado === "SEMINUEVO" ? "default" : "outline"}
-                onClick={() => setFilterEstado("SEMINUEVO")}
-              >
-                Seminuevos ({productos.filter(p => p.estado === "SEMINUEVO").length})
-              </Button>
-              <Button 
-                variant={filterEstado === "RECONDICIONADO" ? "default" : "outline"}
-                onClick={() => setFilterEstado("RECONDICIONADO")}
-              >
-                Reacond. ({productos.filter(p => p.estado === "RECONDICIONADO").length})
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Barra de Herramientas (Búsqueda + Filtros) */}
+      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-center">
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Buscar IMEI, Modelo, Marca..."
+            className="pl-10 bg-gray-50 border-transparent focus:bg-white transition-all rounded-xl"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
+           {["", "NUEVO", "SEMINUEVO", "RECONDICIONADO"].map((estado) => (
+             <button
+                key={estado}
+                onClick={() => setFilterEstado(estado)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border ${
+                  filterEstado === estado 
+                    ? "bg-gray-900 text-white border-gray-900" 
+                    : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
+                }`}
+             >
+               {estado === "" ? "Todos" : estado}
+             </button>
+           ))}
+        </div>
+      </div>
 
-      {/* Tabla de Productos */}
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>Lista de Productos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {filteredProductos.length === 0 ? (
-            <div className="text-center py-12">
-              <Smartphone className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                {productos.length === 0 ? "No hay productos registrados" : "No se encontraron productos"}
-              </h3>
-              <p className="text-gray-500 mb-6">
-                {productos.length === 0 
-                  ? "Comienza agregando tu primer producto al inventario" 
-                  : "Intenta con otros términos de búsqueda"}
-              </p>
-              {productos.length === 0 && (
-                <Button asChild>
-                  <Link href="/admin/productos/nuevo">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Agregar Primer Producto
-                  </Link>
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[100px]">#</TableHead>
-                    <TableHead>IMEI</TableHead>
-                    <TableHead>Marca/Modelo</TableHead>
-                    <TableHead>Color</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Precio Compra</TableHead>
-                    <TableHead>Precio Venta</TableHead>
-                    <TableHead>Margen</TableHead>
-                    <TableHead>Fecha Compra</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredProductos.map((producto, index) => (
-                    <TableRow key={producto.id} className="hover:bg-gray-50">
-                      <TableCell className="font-medium">{index + 1}</TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {producto.imei.length > 10 
-                          ? `${producto.imei.substring(0, 8)}...` 
-                          : producto.imei}
+      {/* Tabla Visual */}
+      <Card className="border-none shadow-sm ring-1 ring-gray-100 bg-white rounded-[1.5rem] overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="bg-gray-50/50">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="w-[80px] text-center">Foto</TableHead>
+                <TableHead>Dispositivo</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead>Finanzas</TableHead>
+                <TableHead>Fecha</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredProductos.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-32 text-center text-gray-500">
+                    No se encontraron productos.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredProductos.map((prod) => {
+                  const img = getImagenPrincipal(prod.fotosJson)
+                  return (
+                    <TableRow key={prod.id} className="group hover:bg-gray-50/50 transition-colors">
+                      {/* Columna FOTO */}
+                      <TableCell className="py-4">
+                        <div className="w-12 h-12 rounded-xl border border-gray-100 bg-white flex items-center justify-center overflow-hidden relative">
+                          {img ? (
+                            <Image src={img} alt={prod.modelo} fill className="object-cover" />
+                          ) : (
+                            <ImageIcon className="text-gray-200" size={20} />
+                          )}
+                        </div>
                       </TableCell>
+                      
+                      {/* Columna INFO */}
                       <TableCell>
-                        <div className="font-medium">{producto.marca}</div>
-                        <div className="text-sm text-gray-500">{producto.modelo}</div>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-gray-900">{prod.modelo}</span>
+                          <span className="text-xs text-gray-500 font-mono tracking-wide">{prod.imei}</span>
+                          <span className="text-[10px] text-gray-400">{prod.color} · {prod.marca}</span>
+                        </div>
                       </TableCell>
-                      <TableCell>{producto.color}</TableCell>
+
+                      {/* Columna ESTADO */}
                       <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          producto.estado === "NUEVO"
-                            ? "bg-green-100 text-green-800 border border-green-200"
-                            : producto.estado === "SEMINUEVO"
-                            ? "bg-yellow-100 text-yellow-800 border border-yellow-200"
-                            : "bg-blue-100 text-blue-800 border border-blue-200"
-                        }`}>
-                          {producto.estado}
-                        </span>
+                         <Badge variant="secondary" className={`
+                            ${prod.estado === 'NUEVO' ? 'bg-emerald-100 text-emerald-700' : ''}
+                            ${prod.estado === 'SEMINUEVO' ? 'bg-amber-100 text-amber-700' : ''}
+                            ${prod.estado === 'RECONDICIONADO' ? 'bg-blue-100 text-blue-700' : ''}
+                            border-transparent font-bold
+                         `}>
+                           {prod.estado}
+                         </Badge>
                       </TableCell>
-                      <TableCell className="font-medium text-red-600">
-                        {formatCurrency(producto.precioCompra)}
-                      </TableCell>
-                      <TableCell className="font-bold text-green-600">
-                        {formatCurrency(producto.precioVenta)}
-                      </TableCell>
+
+                      {/* Columna FINANZAS */}
                       <TableCell>
-                        <span className={`font-bold ${
-                          producto.margen > 20 ? "text-green-600" : 
-                          producto.margen > 10 ? "text-yellow-600" : 
-                          "text-red-600"
-                        }`}>
-                          {producto.margen.toFixed(1)}%
-                        </span>
+                        <div className="flex flex-col">
+                           <span className="text-sm font-bold text-gray-900">
+                             ${prod.precioVenta.toLocaleString()}
+                           </span>
+                           <span className="text-[10px] text-gray-400">
+                             Costo: ${prod.precioCompra.toLocaleString()}
+                           </span>
+                           <span className={`text-[10px] font-bold ${prod.margen > 15 ? 'text-green-600' : 'text-orange-500'}`}>
+                             Margen: {prod.margen.toFixed(0)}%
+                           </span>
+                        </div>
                       </TableCell>
-                      <TableCell className="text-sm text-gray-500">
-                        {formatDate(producto.fechaCompra)}
+
+                      <TableCell className="text-xs text-gray-500">
+                        {new Date(prod.fechaCompra).toLocaleDateString()}
                       </TableCell>
+
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Link href={`/admin/productos/${prod.id}/editar`}>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                              <Edit size={16} />
+                            </Button>
+                          </Link>
                           <Button 
-                            size="sm" 
-                            variant="outline" 
-                            asChild
-                            title="Editar producto"
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50"
+                            onClick={() => eliminarProducto(prod.id)}
                           >
-                            <Link href={`/admin/productos/${producto.id}/editar`}>
-                              <Edit className="h-3 w-3" />
-                            </Link>
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => eliminarProducto(producto.id)}
-                            title="Eliminar producto"
-                          >
-                            <Trash2 className="h-3 w-3" />
+                            <Trash2 size={16} />
                           </Button>
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
+                  )
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </Card>
-
-      {/* Resumen y Estadísticas */}
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-gray-900">{productos.length}</div>
-            <p className="text-sm text-gray-600 flex items-center gap-1">
-              <Package className="h-3 w-3" />
-              Total Productos
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(calcularValorTotal())}
-            </div>
-            <p className="text-sm text-gray-600">Valor Total Inventario</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-blue-600">
-              {calcularProductosNuevos()}
-            </div>
-            <p className="text-sm text-gray-600">Productos Nuevos</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-purple-600">
-              {filteredProductos.length}
-            </div>
-            <p className="text-sm text-gray-600 flex items-center gap-1">
-              <Filter className="h-3 w-3" />
-              Mostrando
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Instrucciones */}
-      {productos.length === 0 && (
-        <Card className="mt-8">
-          <CardContent className="pt-6">
-            <h3 className="font-semibold text-lg mb-3">📋 ¿Cómo comenzar?</h3>
-            <ol className="list-decimal list-inside space-y-2 text-gray-700">
-              <li>Haz clic en "Nuevo Producto" para agregar tu primer teléfono</li>
-              <li>Completa todos los campos del formulario</li>
-              <li>Guarda el producto y aparecerá en esta lista</li>
-              <li>Puedes editar o eliminar productos en cualquier momento</li>
-            </ol>
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }
