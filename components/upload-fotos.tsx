@@ -8,7 +8,7 @@ interface UploadFotosProps {
   onChange: (fotos: string[]) => void
 }
 
-// CORRECCIÓN: Usamos "export function" (sin default) para que el import { UploadFotos } funcione
+// 1. Mantenemos el "export function" para quienes usan { UploadFotos }
 export function UploadFotos({ value = [], onChange }: UploadFotosProps) {
   const [procesando, setProcesando] = useState(false)
 
@@ -22,7 +22,7 @@ export function UploadFotos({ value = [], onChange }: UploadFotosProps) {
         img.src = event.target?.result as string
         img.onload = () => {
           const canvas = document.createElement('canvas')
-          const MAX_WIDTH = 800 // Reducimos a 800px máximo
+          const MAX_WIDTH = 800
           const MAX_HEIGHT = 800
           let width = img.width
           let height = img.height
@@ -44,7 +44,6 @@ export function UploadFotos({ value = [], onChange }: UploadFotosProps) {
           const ctx = canvas.getContext('2d')
           ctx?.drawImage(img, 0, 0, width, height)
           
-          // Convertir a JPEG calidad 70% (Mucho más ligero)
           resolve(canvas.toDataURL('image/jpeg', 0.7))
         }
       }
@@ -57,17 +56,13 @@ export function UploadFotos({ value = [], onChange }: UploadFotosProps) {
 
     setProcesando(true)
     
-    // Procesar todas las fotos
     const promesas = Array.from(files).map(file => comprimirImagen(file))
     const nuevasFotos = await Promise.all(promesas)
     
-    // Combinar y limitar a 5
     const listaFinal = [...value, ...nuevasFotos].slice(0, 5)
     
     onChange(listaFinal)
     setProcesando(false)
-    
-    // Limpiar input para permitir subir la misma foto si se borró
     e.target.value = '' 
   }
 
@@ -82,7 +77,6 @@ export function UploadFotos({ value = [], onChange }: UploadFotosProps) {
         📸 Fotos del teléfono (máx. 5)
       </label>
       
-      {/* Mostrar fotos seleccionadas */}
       {value.length > 0 && (
         <div className="grid grid-cols-3 gap-2 mb-4">
           {value.map((foto, index) => (
@@ -104,7 +98,6 @@ export function UploadFotos({ value = [], onChange }: UploadFotosProps) {
         </div>
       )}
       
-      {/* Botón para subir */}
       <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer transition-colors ${procesando ? 'bg-gray-100 opacity-50 cursor-wait' : 'hover:border-blue-500 hover:bg-blue-50 bg-white'}`}>
         <div className="flex flex-col items-center justify-center pt-5 pb-6">
           {procesando ? (
@@ -138,3 +131,7 @@ export function UploadFotos({ value = [], onChange }: UploadFotosProps) {
     </div>
   )
 }
+
+// 2. AGREGAMOS ESTA LÍNEA AL FINAL
+// Esto permite que también funcione para quienes usan "import UploadFotos" (sin llaves)
+export default UploadFotos;
