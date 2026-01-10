@@ -5,12 +5,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
-import { UploadFotos } from "@/components/upload-fotos";
+// Importación corregida (funciona por defecto o con llaves gracias al cambio anterior)
+import UploadFotos from "@/components/upload-fotos";
 import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -29,7 +29,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, Save, Battery } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-// Mismas opciones que en 'nuevo'
 const marcas = ["Apple", "Samsung", "Xiaomi", "Huawei", "Motorola", "Oppo", "Vivo", "OnePlus", "Google", "Otro"];
 const estados = ["NUEVO", "USADO_EXCELENTE", "USADO_BUENO", "USADO_REGULAR", "REACONDICIONADO", "VENDIDO"];
 const capacidades = ["64GB", "128GB", "256GB", "512GB", "1TB"];
@@ -47,13 +46,15 @@ const formSchema = z.object({
   precioCompra: z.coerce.number().min(0),
   precioVenta: z.coerce.number().min(0),
   precioAnterior: z.coerce.number().optional(),
-  bateriaScore: z.coerce.number().min(0).max(100).default(100), // Campo Batería
+  bateriaScore: z.coerce.number().min(0).max(100).default(100),
   descripcion: z.string().optional(),
   fotosJson: z.string().optional(),
 });
 
+type FormValues = z.infer<typeof formSchema>;
+
 interface ProductoFormProps {
-  initialData?: any; // Datos del producto a editar
+  initialData?: any;
 }
 
 export function ProductoForm({ initialData }: ProductoFormProps) {
@@ -61,39 +62,34 @@ export function ProductoForm({ initialData }: ProductoFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  // Mapear datos iniciales si existen (para edición)
-  const defaultValues = initialData ? {
-    ...initialData,
-    precioCompra: parseFloat(initialData.precioCompra),
-    precioVenta: parseFloat(initialData.precioVenta),
-    precioAnterior: initialData.precioAnterior ? parseFloat(initialData.precioAnterior) : 0,
-    bateriaScore: initialData.specs?.bateriaScore || initialData.bateriaScore || 100, // Recuperar batería
-    fotosJson: initialData.fotosJson || "[]",
-  } : {
-    imei: "",
-    marca: "Apple",
-    modelo: "",
-    color: "",
-    almacenamiento: "128GB",
-    ram: "8GB",
-    estado: "USADO_EXCELENTE",
-    precioCompra: 0,
-    precioVenta: 0,
-    precioAnterior: 0,
-    bateriaScore: 100,
-    descripcion: "",
-    fotosJson: "[]",
+  // CORRECCIÓN: Definición segura de valores por defecto para evitar conflictos de tipos
+  const defaultValues: Partial<FormValues> = {
+    imei: initialData?.imei || "",
+    marca: initialData?.marca || "Apple",
+    modelo: initialData?.modelo || "",
+    color: initialData?.color || "",
+    almacenamiento: initialData?.almacenamiento || "128GB",
+    ram: initialData?.ram || "8GB",
+    estado: initialData?.estado || "USADO_EXCELENTE",
+    precioCompra: initialData ? Number(initialData.precioCompra) : 0,
+    precioVenta: initialData ? Number(initialData.precioVenta) : 0,
+    precioAnterior: initialData?.precioAnterior ? Number(initialData.precioAnterior) : undefined,
+    // Lógica segura para recuperar la batería
+    bateriaScore: initialData 
+      ? (Number(initialData.specs?.bateriaScore) || Number(initialData.bateriaScore) || 100) 
+      : 100,
+    descripcion: initialData?.descripcion || "",
+    fotosJson: initialData?.fotosJson || "[]",
   };
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues,
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: FormValues) => {
     try {
       setLoading(true);
-      // Determinar si es Crear o Editar
       const url = initialData ? `/api/productos/${initialData.id}` : `/api/productos`;
       const method = initialData ? "PATCH" : "POST";
 
@@ -303,7 +299,6 @@ export function ProductoForm({ initialData }: ProductoFormProps) {
                 )}
               />
               
-              {/* CAMPO DE BATERÍA UNIFICADO */}
               <FormField
                 control={form.control}
                 name="bateriaScore"
