@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Check, X, Smartphone, Battery, Database, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Check, X, Smartphone, Battery, Database, ShieldCheck, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function CompararPage() {
+// 1. Movemos la lógica a un componente interno
+function CompararContent() {
   const searchParams = useSearchParams();
   const ids = searchParams.get("ids")?.split(",") || [];
   const [productos, setProductos] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,7 +31,7 @@ export default function CompararPage() {
       }
     }
     fetchCompareProducts();
-  }, [searchParams]);
+  }, [searchParams, ids]); // Agregamos dependencias correctas
 
   if (ids.length === 0) {
     return (
@@ -106,6 +108,19 @@ export default function CompararPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+// 2. Componente Principal con Suspense (Requerido por Next.js para useSearchParams)
+export default function CompararPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-[#FBFBFD]">
+        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+      </div>
+    }>
+      <CompararContent />
+    </Suspense>
   );
 }
 
