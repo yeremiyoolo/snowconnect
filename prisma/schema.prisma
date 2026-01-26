@@ -5,92 +5,305 @@ generator client {
 
 // 2. Configuración de la Base de Datos
 datasource db {
-  provider  = "postgresql" // O "sqlite" si estás usando dev.db local
+  provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
-// 3. Modelos de la Base de Datos
-
-model User {
-  id        String   @id @default(cuid())
-  name      String?
-  email     String   @unique
-  password  String
-  role      String   @default("USER") // "ADMIN" o "USER"
-  
-  // Perfil
-  image     String?
-  telefono  String?  
-  bio       String?
-  ubicacion String?
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relaciones
-  productos Producto[] 
-  ventas    Venta[]    
-  logs      AuditLog[]
-  wishlist  Wishlist[]
+// ==========================================
+// CONFIGURACIÓN GLOBAL
+// ==========================================
+model StoreSettings {
+  id            String   @id @default(cuid())
+  updatedAt     DateTime @updatedAt
+  storeName     String   @default("SnowConnect")
+  description   String?  @db.Text
+  supportEmail  String?
+  supportPhone  String?
+  whatsapp      String?  
+  address       String?
+  logoUrl       String?  
 }
 
+// ==========================================
+// USUARIO & AUTENTICACIÓN
+// ==========================================
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  password      String?
+  image         String?
+  role          String    @default("USER")
+  
+  telefono      String?   @unique 
+  bio           String?
+  ubicacion     String?
+  
+  snowCashBalance Float   @default(0.00)
+  currency      String    @default("DOP")
+  language      String    @default("es")
+  theme         String    @default("system")
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  identity      IdentityVerification? 
+  addresses     Address[]
+  bankAccounts  BankAccount[]         
+  notifications NotificationSettings?
+  walletTransactions WalletTransaction[]   
+  orders        Order[]           
+  repairs       RepairTicket[]    
+  quotes        QuoteRequest[]    
+  
+  // Relaciones con Sistema
+  productos     Producto[] 
+  ventas        Venta[]    
+  logs          AuditLog[]
+  wishlist      Wishlist[]
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String? @db.Text
+  access_token       String? @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String? @db.Text
+  session_state      String?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  @@unique([identifier, token])
+}
+
+// ==========================================
+// MÓDULOS SNOWCONNECT ID
+// ==========================================
+model WalletTransaction {
+  id          String          @id @default(cuid())
+  amount      Float
+  type        TransactionType 
+  description String
+  referenceId String?         
+  createdAt   DateTime        @default(now())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum TransactionType {
+  CREDIT
+  DEBIT
+}
+
+model IdentityVerification {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentType   String   
+  documentNumber String
+  frontImage     String   
+  backImage      String?  
+  status         String   @default("PENDING") 
+  rejectionReason String?
+  verifiedAt     DateTime?
+}
+
+model Address {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label       String   
+  recipient   String
+  phone       String
+  street      String
+  city        String
+  province    String
+  details     String?  
+  coordinates String?  
+  isDefault   Boolean  @default(false)
+}
+
+model BankAccount {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bankName      String   
+  accountNumber String
+  accountType   String   
+  holderName    String
+  isDefault     Boolean  @default(false)
+}
+
+model NotificationSettings {
+  id              String  @id @default(cuid())
+  userId          String  @unique
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailOrders     Boolean @default(true)
+  whatsappPromos  Boolean @default(false)
+  securityAlerts  Boolean @default(true)
+}
+
+// ==========================================
+// E-COMMERCE & OPERACIONES
+// ==========================================
+model Order {
+  id             String      @id @default(cuid())
+  orderNumber    String      @unique 
+  userId         String
+  user           User        @relation(fields: [userId], references: [id])
+  status         String      @default("PENDING") 
+  total          Float
+  trackingNumber String?
+  carrier        String?     
+  items          OrderItem[]
+  createdAt      DateTime    @default(now())
+}
+
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  order       Order   @relation(fields: [orderId], references: [id])
+  productId   String
+  productName String
+  quantity    Int
+  price       Float
+  imei        String? 
+}
+
+model RepairTicket {
+  id           String   @id @default(cuid())
+  ticketNumber String   @unique 
+  
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  
+  deviceModel  String   
+  issue        String   
+  
+  // CAMPO NUEVO PARA SERVICIOS (Pantalla/Batería)
+  serviceType  String   @default("GENERAL") 
+  
+  status       String   @default("PENDING") 
+  cost         Float?
+  notes        String?  
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ==========================================
+// INVENTARIO & PRODUCTOS (OPTIMIZADO)
+// ==========================================
 model Producto {
   id             String   @id @default(cuid())
-  imei           String   @unique 
+  imei           String?  @unique 
+  
+  // Información Visual
+  nombre         String   
   marca          String
   modelo         String
-  color          String
-  almacenamiento String
-  ram            String
-  estado         String   @default("DISPONIBLE") 
+  descripcion    String?  @db.Text
   
-  // Precios
-  precioCompra   Float
-  precioVenta    Float
+  // Precios y Estado
+  precioVenta    Float    
+  precioCompra   Float?   
   precioAnterior Float?   @default(0)
   enOferta       Boolean  @default(false)
-  margen         Float
+  estado         String   @default("DISPONIBLE") 
+  stock          Int      @default(1)
+
+  // RELACIONES NUEVAS (Estilo Apple)
+  imagenes       ImagenProducto[]
+  colores        ColorProducto[]
+  almacenamiento OpcionAlmacenamiento[]
   
-  descripcion    String?
-  fotosJson      String?  @db.Text // SQLite no soporta @db.Text, si usas SQLite quítalo
+  // Relaciones legacy/operativas
+  specsId        String?                   @unique
+  specs          EspecificacionesTecnicas? @relation(fields: [specsId], references: [id])
+  
+  userId         String?   
+  user           User?    @relation(fields: [userId], references: [id])
+  venta          Venta?
+  wishlistItems  Wishlist[]
+
+  // Campo legacy para compatibilidad
+  fotosJson      String?  @db.Text 
   
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   fechaVenta     DateTime?
   fechaCompra    DateTime @default(now())
-
-  // Relaciones
-  userId         String   
-  user           User     @relation(fields: [userId], references: [id])
-  venta          Venta?
-
-  // --- NUEVA RELACIÓN PARA BATERÍA Y SPECS ---
-  specsId        String?                   @unique
-  specs          EspecificacionesTecnicas? @relation(fields: [specsId], references: [id])
-  
-  wishlistItems  Wishlist[]
 }
 
-// --- MODELO NUEVO: ESPECIFICACIONES TÉCNICAS ---
+// Sub-tablas para Detalles del Producto
+model ImagenProducto {
+  id         String   @id @default(cuid())
+  url        String
+  productoId String
+  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+}
+
+model ColorProducto {
+  id         String   @id @default(cuid())
+  nombre     String   
+  hexCode    String   
+  productoId String
+  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+}
+
+model OpcionAlmacenamiento {
+  id         String   @id @default(cuid())
+  capacidad  String   
+  productoId String
+  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+}
+
 model EspecificacionesTecnicas {
   id           String    @id @default(cuid())
   
-  // Aquí se guarda la batería
-  bateriaScore Int       @default(100) 
-  
-  // Otros scores para futuro (Cámara, Gaming)
-  camaraScore  Int       @default(50)
-  gamingScore  Int       @default(50)
-  resistencia  Int       @default(50)
-  
+  // Textos descriptivos
   procesador   String?
-  screenHz     Int?      @default(60)
-  screenType   String?
+  ram          String?
+  bateria      String?
+  camara       String?
+  pantalla     String?
+  sistema      String?
 
+  // Scores Numéricos
+  bateriaScore Int       @default(100) 
+  camaraScore  Int       @default(80)
+  gamingScore  Int       @default(80)
+  resistencia  Int       @default(80)
+  
   producto     Producto?
 }
 
+// ==========================================
+// OTROS (Clientes, Ventas, Logs...)
+// ==========================================
 model Cliente {
   id        String   @id @default(cuid())
   nombre    String
@@ -101,29 +314,23 @@ model Cliente {
   notas     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   compras   Venta[]
 }
 
 model Venta {
   id          String   @id @default(cuid())
-  
   clienteId   String?  
   clienteRel  Cliente? @relation(fields: [clienteId], references: [id])
-  cliente     String?  // Nombre rápido por si se borra el cliente
-
+  cliente     String? 
   notas       String?
   precioVenta Float
-  costo       Float
-  margen      Float
-  
+  costo       Float?
+  margen      Float?
   createdAt   DateTime @default(now())
-
   productoId  String   @unique
   producto    Producto @relation(fields: [productoId], references: [id])
-
-  userId      String   
-  user        User     @relation(fields: [userId], references: [id])
+  userId      String?   
+  user        User?    @relation(fields: [userId], references: [id])
 }
 
 model Testimonio {
@@ -153,21 +360,34 @@ model AuditLog {
   entidadId String   
   detalles  String   
   createdAt DateTime @default(now())
-
   userId    String
   user      User     @relation(fields: [userId], references: [id])
 }
 
 model Wishlist {
   id         String   @id @default(cuid())
-  
   userId     String
   user       User     @relation(fields: [userId], references: [id])
-  
   productoId String
   producto   Producto @relation(fields: [productoId], references: [id])
-  
   createdAt  DateTime @default(now())
-
   @@unique([userId, productoId]) 
+}
+
+model QuoteRequest {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id])
+  customerName  String
+  customerPhone String
+  customerEmail String
+  brand         String
+  model         String
+  storage       String
+  condition     String   
+  details       String?  @db.Text
+  images        String[]
+  status        String   @default("PENDING") 
+  finalPrice    Float?   
 }

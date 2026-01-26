@@ -3,42 +3,40 @@
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import Image from "next/image" // <--- Importante para las fotos
+import Image from "next/image"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge" // <--- Usamos Badge para estados
+import { Badge } from "@/components/ui/badge"
 import { 
-  Package, 
   Plus, 
   Search, 
   Edit, 
   Trash2, 
-  Smartphone, 
-  Filter, 
-  Download,
   ImageIcon
 } from "lucide-react"
 
-// Importamos tu botón de exportar (asegúrate de haberlo creado en el paso anterior)
+// Importamos tu botón de exportar
 import { ExportButton } from "@/components/admin/export-button"
 
+// 1. CORRECCIÓN EN EL TIPO: Agregamos 'almacenamiento'
 type Producto = {
   id: string
   imei: string
   marca: string
   modelo: string
   color: string
+  almacenamiento: string // <--- NUEVO CAMPO (GB)
   estado: string
   precioCompra: number
   precioVenta: number
-  margen: number
+  margen?: number | null
   fechaCompra: string
   fechaVenta: string | null
-  fotosJson: string | null // <--- Agregamos este campo
+  fotosJson: string | null
 }
 
 export default function ProductosPage() {
@@ -79,7 +77,6 @@ export default function ProductosPage() {
       const response = await fetch(`/api/productos/${id}`, { method: "DELETE" })
       if (response.ok) {
         setProductos(productos.filter(p => p.id !== id))
-        // Aquí podrías usar toast({ title: "Producto eliminado" }) si tienes el hook
       } else {
         alert("No se pudo eliminar")
       }
@@ -93,7 +90,10 @@ export default function ProductosPage() {
     if (!jsonString) return null
     try {
       const fotos = JSON.parse(jsonString)
-      return Array.isArray(fotos) && fotos.length > 0 ? fotos[0] : null
+      if (Array.isArray(fotos) && fotos.length > 0) {
+        return typeof fotos[0] === 'string' ? fotos[0] : fotos[0].url
+      }
+      return null
     } catch {
       return null
     }
@@ -102,27 +102,33 @@ export default function ProductosPage() {
   const filteredProductos = productos.filter((producto) => {
     const term = search.toLowerCase()
     const matchesSearch = 
-      producto.marca.toLowerCase().includes(term) ||
-      producto.modelo.toLowerCase().includes(term) ||
-      producto.imei.includes(term) ||
-      producto.color.toLowerCase().includes(term)
+      (producto.marca || "").toLowerCase().includes(term) ||
+      (producto.modelo || "").toLowerCase().includes(term) ||
+      (producto.imei || "").includes(term) ||
+      (producto.color || "").toLowerCase().includes(term) ||
+      (producto.almacenamiento || "").toLowerCase().includes(term) // Buscar por GB
     
     const matchesEstado = !filterEstado || producto.estado === filterEstado
     return matchesSearch && matchesEstado
   })
 
-  // Preparar datos para Excel
-  const exportData = filteredProductos.map(p => ({
-    IMEI: p.imei,
-    Marca: p.marca,
-    Modelo: p.modelo,
-    Color: p.color,
-    Estado: p.estado,
-    Costo: p.precioCompra,
-    PrecioVenta: p.precioVenta,
-    Margen: `${p.margen.toFixed(2)}%`,
-    FechaIngreso: new Date(p.fechaCompra).toLocaleDateString()
-  }))
+  // --- Preparar datos para Excel ---
+  const exportData = filteredProductos.map(p => {
+    const margenSeguro = p.margen ?? 0 
+    
+    return {
+      IMEI: p.imei,
+      Marca: p.marca,
+      Modelo: p.modelo,
+      Color: p.color,
+      Capacidad: p.almacenamiento, // <--- Agregado al Excel
+      Estado: p.estado,
+      Costo: p.precioCompra,
+      PrecioVenta: p.precioVenta,
+      Margen: `${margenSeguro.toFixed(2)}`,
+      FechaIngreso: p.fechaCompra ? new Date(p.fechaCompra).toLocaleDateString() : "Sin fecha"
+    }
+  })
 
   if (loading) {
     return (
@@ -136,7 +142,7 @@ export default function ProductosPage() {
   return (
     <div className="space-y-6">
       
-      {/* Header con Acciones */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-2">
@@ -149,9 +155,7 @@ export default function ProductosPage() {
         </div>
         
         <div className="flex gap-2 w-full md:w-auto">
-          {/* Botón de Exportar Integrado */}
           <ExportButton data={exportData} filename="inventario_snowconnect" label="Excel" />
-          
           <Button asChild className="bg-gray-900 text-white hover:bg-black shadow-lg shadow-gray-200 gap-2 w-full md:w-auto">
             <Link href="/admin/productos/nuevo">
               <Plus size={16} /> Nuevo Producto
@@ -160,12 +164,12 @@ export default function ProductosPage() {
         </div>
       </div>
 
-      {/* Barra de Herramientas (Búsqueda + Filtros) */}
+      {/* Filtros */}
       <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-center">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Buscar IMEI, Modelo, Marca..."
+            placeholder="Buscar por IMEI, Modelo, GB..."
             className="pl-10 bg-gray-50 border-transparent focus:bg-white transition-all rounded-xl"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -188,7 +192,7 @@ export default function ProductosPage() {
         </div>
       </div>
 
-      {/* Tabla Visual */}
+      {/* Tabla */}
       <Card className="border-none shadow-sm ring-1 ring-gray-100 bg-white rounded-[1.5rem] overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
@@ -212,9 +216,11 @@ export default function ProductosPage() {
               ) : (
                 filteredProductos.map((prod) => {
                   const img = getImagenPrincipal(prod.fotosJson)
+                  const margenVal = prod.margen ?? 0;
+
                   return (
                     <TableRow key={prod.id} className="group hover:bg-gray-50/50 transition-colors">
-                      {/* Columna FOTO */}
+                      {/* FOTO */}
                       <TableCell className="py-4">
                         <div className="w-12 h-12 rounded-xl border border-gray-100 bg-white flex items-center justify-center overflow-hidden relative">
                           {img ? (
@@ -225,16 +231,25 @@ export default function ProductosPage() {
                         </div>
                       </TableCell>
                       
-                      {/* Columna INFO */}
+                      {/* INFO + GB + COLOR */}
                       <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-bold text-gray-900">{prod.modelo}</span>
+                        <div className="flex flex-col gap-1">
+                          <span className="font-bold text-gray-900 leading-tight">{prod.modelo}</span>
                           <span className="text-xs text-gray-500 font-mono tracking-wide">{prod.imei}</span>
-                          <span className="text-[10px] text-gray-400">{prod.color} · {prod.marca}</span>
+                          
+                          {/* 2. CORRECCIÓN VISUAL: Badges para GB y Color */}
+                          <div className="flex gap-1 mt-1">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-800">
+                              {prod.almacenamiento || "N/A"}
+                            </span>
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-800">
+                              {prod.color || "N/A"}
+                            </span>
+                          </div>
                         </div>
                       </TableCell>
 
-                      {/* Columna ESTADO */}
+                      {/* ESTADO */}
                       <TableCell>
                          <Badge variant="secondary" className={`
                             ${prod.estado === 'NUEVO' ? 'bg-emerald-100 text-emerald-700' : ''}
@@ -246,7 +261,7 @@ export default function ProductosPage() {
                          </Badge>
                       </TableCell>
 
-                      {/* Columna FINANZAS */}
+                      {/* FINANZAS */}
                       <TableCell>
                         <div className="flex flex-col">
                            <span className="text-sm font-bold text-gray-900">
@@ -255,16 +270,18 @@ export default function ProductosPage() {
                            <span className="text-[10px] text-gray-400">
                              Costo: ${prod.precioCompra.toLocaleString()}
                            </span>
-                           <span className={`text-[10px] font-bold ${prod.margen > 15 ? 'text-green-600' : 'text-orange-500'}`}>
-                             Margen: {prod.margen.toFixed(0)}%
+                           <span className={`text-[10px] font-bold ${margenVal > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                             Ganancia: ${margenVal.toLocaleString()}
                            </span>
                         </div>
                       </TableCell>
 
+                      {/* FECHA */}
                       <TableCell className="text-xs text-gray-500">
-                        {new Date(prod.fechaCompra).toLocaleDateString()}
+                        {prod.fechaCompra ? new Date(prod.fechaCompra).toLocaleDateString() : "-"}
                       </TableCell>
 
+                      {/* ACCIONES */}
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Link href={`/admin/productos/${prod.id}/editar`}>

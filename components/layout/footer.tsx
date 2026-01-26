@@ -87,6 +87,7 @@ export function Footer() {
             <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-900 dark:text-white mb-8">Ubicación</h4>
             
             <div className="space-y-6 w-full">
+              {/* UBICACIÓN */}
               <div className="flex items-start gap-4 text-sm font-bold text-gray-500 dark:text-gray-400 justify-center md:justify-start group cursor-default">
                 <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 shrink-0 group-hover:scale-110 transition-transform">
                    <MapPin size={20} />
@@ -97,14 +98,17 @@ export function Footer() {
                 </div>
               </div>
 
-              <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 w-full max-w-xs mx-auto md:mx-0">
-                <div className="flex items-center gap-3 mb-3">
-                   <Clock size={16} className="text-gray-400" />
-                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Horario de Atención</p>
+              {/* HORARIO (DISEÑO ACTUALIZADO) */}
+              <div className="flex items-start gap-4 text-sm font-bold text-gray-500 dark:text-gray-400 justify-center md:justify-start group cursor-default">
+                <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 shrink-0 group-hover:scale-110 transition-transform">
+                   <Clock size={20} />
                 </div>
-                <p className="text-sm font-black text-gray-900 dark:text-white">Lunes - Sábado</p>
-                <p className="text-sm text-gray-500">9:00 AM - 7:00 PM</p>
+                <div>
+                   <p className="text-gray-900 dark:text-white mb-1">Lunes - Sábado</p>
+                   <p className="text-xs font-medium">10:00 AM - 9:00 PM</p>
+                </div>
               </div>
+
             </div>
           </div>
         </div>

@@ -1,15 +1,29 @@
-// next.config.ts
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
-    domains: [
-      'res.cloudinary.com', // Si usas Cloudinary para fotos
-      'utfs.io',            // Si usas UploadThing
-      'images.unsplash.com'
-    ],
-    // Habilita el soporte para blur placeholders de forma remota
     remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.public.blob.vercel-storage.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'utfs.io',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
+      // Comodín para permitir cualquier imagen externa HTTPS
       {
         protocol: 'https',
         hostname: '**',
