@@ -1,7 +1,7 @@
 "use client";
 
 import { useCompareStore } from "@/lib/store/compare";
-import { useCartStore } from "@/lib/store/cart";
+import { useCart } from "@/hooks/use-cart";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { X, Minus, Plus, ShoppingCart, ArrowLeft, Cpu, HardDrive, Battery, Camera, Zap, Smartphone } from "lucide-react";
@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 export default function ComparePage() {
   const { items, removeItem, clearCompare } = useCompareStore();
-  const cart = useCartStore();
+  const cart = useCart();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
