@@ -1,112 +1,168 @@
-"use client";
+import { prisma } from "@/lib/prisma";
+import { 
+  History, 
+  User as UserIcon, 
+  ShieldAlert, 
+  Activity, 
+  Search, 
+  Calendar,
+  Box,
+  ShoppingCart,
+  Settings,
+  Database
+} from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
 
-import { useEffect, useState } from "react";
-import { History, ShieldAlert, User, FileText, Loader2 } from "lucide-react";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
+export const dynamic = 'force-dynamic';
 
-export default function AuditoriaPage() {
-  const [logs, setLogs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+export default async function AdminAuditoriaPage() {
+  const logs = await prisma.auditLog.findMany({
+    include: {
+      user: true
+    },
+    orderBy: {
+      createdAt: 'desc'
+    },
+    take: 100 // Limitamos a los últimos 100 para no saturar
+  });
 
-  useEffect(() => {
-    fetch("/api/logs")
-      .then((res) => res.json())
-      .then((data) => {
-        setLogs(Array.isArray(data) ? data : []);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setLoading(false);
-      });
-  }, []);
+  // Función para asignar iconos según la entidad
+  const getEntityIcon = (entidad: string) => {
+    switch (entidad.toUpperCase()) {
+      case 'PRODUCTO': return <Box size={14} />;
+      case 'ORDEN': case 'VENTA': return <ShoppingCart size={14} />;
+      case 'USUARIO': return <UserIcon size={14} />;
+      case 'SETTINGS': return <Settings size={14} />;
+      default: return <Database size={14} />;
+    }
+  };
+
+  // Función para colores de acciones
+  const getActionColor = (accion: string) => {
+    const a = accion.toUpperCase();
+    if (a.includes('DELETE') || a.includes('ELIMINAR')) return "bg-red-500/10 text-red-600 border-red-500/20";
+    if (a.includes('CREATE') || a.includes('CREAR')) return "bg-green-500/10 text-green-600 border-green-500/20";
+    if (a.includes('UPDATE') || a.includes('ACTUALIZAR')) return "bg-blue-500/10 text-blue-600 border-blue-500/20";
+    return "bg-zinc-500/10 text-zinc-600 border-zinc-500/20";
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center shadow-sm">
-            <ShieldAlert size={24} />
-          </div>
-          <div>
-             <h1 className="text-3xl font-black text-gray-900 tracking-tight">Registro de Auditoría</h1>
-             <p className="text-gray-500 font-medium">Movimientos sensibles y seguridad interna.</p>
-          </div>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 p-6 md:p-10 max-w-[1700px] mx-auto pb-32">
+      
+      {/* CABECERA */}
+      <div className="flex flex-col md:flex-row justify-between items-start gap-6">
+        <div>
+          <h1 className="text-4xl lg:text-5xl font-black tracking-tighter text-foreground italic uppercase mb-1">
+            Logs de <span className="text-primary">Auditoría</span>
+          </h1>
+          <p className="text-muted-foreground font-bold uppercase text-xs tracking-[0.2em] opacity-70">
+            Registro histórico de movimientos y seguridad del sistema
+          </p>
         </div>
-        <div className="bg-white px-4 py-2 rounded-full border text-xs font-bold text-gray-500 shadow-sm">
-          {logs.length} Movimientos recientes
+        
+        <div className="flex gap-4">
+           <div className="bg-card border border-border/50 px-8 py-5 rounded-[2.5rem] shadow-xl flex flex-col justify-center min-w-[180px]">
+              <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-1.5"><Activity size={12}/> Eventos Hoy</p>
+              <p className="text-3xl font-black text-foreground italic mt-1.5">{logs.length}</p>
+           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-[1.5rem] border border-gray-100 shadow-sm overflow-hidden">
-        {loading ? (
-          <div className="p-20 text-center text-gray-400 flex flex-col items-center">
-            <Loader2 className="animate-spin mb-2" />
-            Cargando registros de seguridad...
-          </div>
-        ) : logs.length === 0 ? (
-          <div className="p-20 text-center text-gray-400 flex flex-col items-center">
-            <History className="mb-4 text-gray-200" size={64} />
-            <h3 className="text-lg font-bold text-gray-900">Sin movimientos</h3>
-            <p>No hay registros de auditoría aún en el sistema.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-gray-50/50 text-xs uppercase text-gray-400 font-bold tracking-wider">
-                <tr>
-                  <th className="p-6">Usuario (Staff)</th>
-                  <th className="p-6">Acción</th>
-                  <th className="p-6">Detalles del Cambio</th>
-                  <th className="p-6 text-right">Fecha</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-gray-50/50 transition">
-                    <td className="p-6">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold text-xs border border-gray-200 uppercase">
-                          {log.user?.name?.[0] || <User size={14} />}
-                        </div>
-                        <div>
-                          <p className="font-bold text-gray-900 text-sm">{log.user?.name || "Desconocido"}</p>
-                          <p className="text-[10px] text-gray-400">{log.user?.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-6">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wider
-                        ${log.accion === 'CREAR' ? 'bg-green-100 text-green-700' : 
-                          log.accion === 'EDITAR' ? 'bg-blue-100 text-blue-700' : 
-                          log.accion === 'ELIMINAR' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
-                        }`}>
-                        {log.accion}
-                      </span>
-                      <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase">{log.entidad}</p>
-                    </td>
-                    <td className="p-6">
-                      <div className="flex items-start gap-2 max-w-md">
-                        <FileText size={16} className="text-gray-300 mt-0.5 shrink-0" />
-                        <p className="text-sm text-gray-600 font-medium leading-relaxed">{log.detalles}</p>
-                      </div>
-                    </td>
-                    <td className="p-6 text-right">
-                      <p className="text-sm font-bold text-gray-900">
-                        {format(new Date(log.createdAt), "dd MMM, yyyy", { locale: es })}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {format(new Date(log.createdAt), "hh:mm a")}
-                      </p>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* BUSCADOR RÁPIDO (Visual) */}
+      <div className="relative group">
+        <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={20} />
+        <Input 
+          placeholder="Filtrar actividad por acción, usuario o entidad..." 
+          className="h-16 pl-16 rounded-[2rem] bg-card border-border/50 shadow-sm text-lg italic font-medium"
+        />
+      </div>
+
+      {/* TABLA DE AUDITORÍA */}
+      <div className="bg-card border border-border/50 rounded-[3rem] overflow-hidden shadow-2xl">
+        <Table>
+          <TableHeader className="bg-secondary/30">
+            <TableRow className="hover:bg-transparent border-none">
+              <TableHead className="py-6 px-8 font-black uppercase text-[10px] tracking-widest text-muted-foreground">Admin / Usuario</TableHead>
+              <TableHead className="font-black uppercase text-[10px] tracking-widest text-muted-foreground">Acción</TableHead>
+              <TableHead className="font-black uppercase text-[10px] tracking-widest text-muted-foreground">Entidad / ID</TableHead>
+              <TableHead className="font-black uppercase text-[10px] tracking-widest text-muted-foreground">Detalles del Cambio</TableHead>
+              <TableHead className="text-right px-8 font-black uppercase text-[10px] tracking-widest text-muted-foreground text-primary">Fecha / Hora</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {logs.map((log) => (
+              <TableRow key={log.id} className="group hover:bg-secondary/10 transition-colors border-b-border/30">
+                {/* USUARIO */}
+                <TableCell className="py-5 px-8">
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-10 w-10 border border-border/50">
+                      <AvatarImage src={log.user.image || ""} />
+                      <AvatarFallback className="font-black text-xs bg-primary/10 text-primary">
+                        {log.user.name?.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-black text-xs uppercase italic text-foreground leading-none">{log.user.name}</p>
+                      <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-1">ID: {log.userId.slice(-6)}</p>
+                    </div>
+                  </div>
+                </TableCell>
+
+                {/* ACCIÓN */}
+                <TableCell>
+                  <Badge className={`rounded-full px-3 py-1 font-black text-[9px] uppercase tracking-widest border ${getActionColor(log.accion)}`}>
+                    {log.accion}
+                  </Badge>
+                </TableCell>
+
+                {/* ENTIDAD */}
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-secondary/50 rounded-lg text-muted-foreground">
+                      {getEntityIcon(log.entidad)}
+                    </div>
+                    <div>
+                      <p className="font-bold text-[10px] uppercase tracking-tighter">{log.entidad}</p>
+                      <p className="text-[9px] font-medium text-muted-foreground font-mono">#{log.entidadId.slice(-8)}</p>
+                    </div>
+                  </div>
+                </TableCell>
+
+                {/* DETALLES */}
+                <TableCell className="max-w-[300px]">
+                  <p className="text-xs font-medium text-muted-foreground italic leading-relaxed line-clamp-2">
+                    {log.detalles}
+                  </p>
+                </TableCell>
+
+                {/* FECHA */}
+                <TableCell className="text-right px-8">
+                  <div className="space-y-1">
+                    <p className="text-xs font-black text-foreground italic flex items-center justify-end gap-1.5">
+                      <Calendar size={12} className="text-primary"/> 
+                      {new Date(log.createdAt).toLocaleDateString()}
+                    </p>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase">
+                      {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    </p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        
+        {logs.length === 0 && (
+          <div className="py-20 flex flex-col items-center justify-center text-muted-foreground opacity-50">
+            <History size={48} className="mb-4" />
+            <p className="font-black uppercase text-xs tracking-widest">No hay registros de actividad aún</p>
           </div>
         )}
       </div>
+
     </div>
   );
 }

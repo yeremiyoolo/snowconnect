@@ -1,84 +1,118 @@
 import { prisma } from "@/lib/prisma";
+import Link from "next/link";
+import { HelpCircle, Search, Plus, MessageCircle, Info } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { FaqCard } from "@/components/admin/soporte/faq-card";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { MessageCircleQuestion } from "lucide-react";
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
-export default async function AdminSoportePage() {
-  // FILTRO: Solo mostramos GENERAL
-  const tickets = await prisma.repairTicket.findMany({
-    where: { serviceType: "GENERAL" },
-    orderBy: { createdAt: "desc" },
-    include: { user: true }
+interface SupportPageProps {
+  searchParams: Promise<{
+    filter?: string;
+    q?: string;
+  }>;
+}
+
+export default async function AdminSoportePage({ searchParams }: SupportPageProps) {
+  const params = await searchParams;
+  const currentFilter = params?.filter || "ALL";
+  const searchQuery = params?.q || "";
+
+  // 1. Obtener datos
+  const allFaqs = await prisma.faqItem.findMany({
+    orderBy: { order: 'asc' }
   });
 
+  // 2. Filtrado manual para las métricas
+  const visibles = allFaqs.filter(f => f.isVisible);
+
+  // 3. Construir query de búsqueda
+  const whereClause: any = {};
+  if (currentFilter !== "ALL") whereClause.category = currentFilter;
+  if (searchQuery) {
+    whereClause.OR = [
+      { question: { contains: searchQuery, mode: "insensitive" } },
+      { answer: { contains: searchQuery, mode: "insensitive" } },
+    ];
+  }
+
+  const faqs = await prisma.faqItem.findMany({
+    where: whereClause,
+    orderBy: { order: 'asc' }
+  });
+
+  const filtros = [
+    { id: "ALL", label: "Todo" },
+    { id: "GENERAL", label: "General" },
+    { id: "VENTAS", label: "Ventas" },
+    { id: "GARANTIA", label: "Garantía" },
+    { id: "ENVIOS", label: "Envíos" },
+  ];
+
   return (
-    <div className="space-y-8 p-8 bg-gray-50 min-h-screen">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 p-6 max-w-[1600px] mx-auto">
+      
+      {/* CABECERA */}
+      <div className="flex flex-col md:flex-row justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Mesa de Ayuda</h1>
-          <p className="text-gray-500 font-medium">Consultas técnicas, software y diagnósticos.</p>
+          <h1 className="text-4xl lg:text-5xl font-black tracking-tighter text-foreground italic uppercase mb-1">
+            Centro de <span className="text-primary">Soporte</span>
+          </h1>
+          <p className="text-muted-foreground font-bold uppercase text-xs tracking-[0.2em] opacity-70">
+            Gestiona la base de conocimientos y ayuda al cliente
+          </p>
         </div>
-        <Badge variant="outline" className="bg-white px-4 py-2 border-gray-200">
-            Tickets Abiertos: {tickets.length}
-        </Badge>
+        
+        <div className="flex items-center gap-4">
+           <div className="bg-card border border-border/50 px-6 py-4 rounded-[2rem] shadow-sm flex flex-col justify-center">
+              <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-1.5"><Info size={12}/> FAQs Publicadas</p>
+              <p className="text-2xl font-black text-foreground italic tracking-tighter mt-1">{visibles.length} Activas</p>
+           </div>
+           <Button className="h-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest text-xs px-8 shadow-xl shadow-primary/20 transition-all hover:scale-105 active:scale-95">
+             <Plus size={18} className="mr-2" /> Nueva FAQ
+           </Button>
+        </div>
       </div>
 
-      <Card className="border-none shadow-xl shadow-gray-100 ring-1 ring-gray-100 rounded-[1.5rem] overflow-hidden bg-white">
-        <Table>
-          <TableHeader className="bg-gray-50/80">
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="font-bold text-gray-400 text-xs uppercase">ID</TableHead>
-              <TableHead className="font-bold text-gray-400 text-xs uppercase">Usuario</TableHead>
-              <TableHead className="font-bold text-gray-400 text-xs uppercase">Consulta</TableHead>
-              <TableHead className="font-bold text-gray-400 text-xs uppercase">Estado</TableHead>
-              <TableHead className="text-right font-bold text-gray-400 text-xs uppercase">Fecha</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {tickets.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="h-48 text-center text-gray-400 font-medium">
-                  Bandeja de entrada vacía.
-                </TableCell>
-              </TableRow>
-            ) : (
-              tickets.map((ticket) => (
-                <TableRow key={ticket.id} className="group hover:bg-purple-50/50 transition-colors cursor-pointer">
-                  <TableCell className="font-mono text-xs font-bold text-gray-500">#{ticket.ticketNumber}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span className="font-bold text-gray-900">{ticket.user?.name}</span>
-                      <span className="text-xs text-gray-400">{ticket.user?.email}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="max-w-md">
-                    <div className="flex items-start gap-2">
-                        <MessageCircleQuestion size={16} className="text-purple-500 mt-0.5 shrink-0" />
-                        <div>
-                            <span className="text-xs font-bold text-gray-500 block mb-0.5">{ticket.deviceModel}</span>
-                            <p className="text-sm text-gray-700 line-clamp-1">{ticket.issue}</p>
-                        </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className="bg-gray-100 text-gray-700 border-gray-200 shadow-none">
-                        {ticket.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right text-xs text-gray-400">
-                    {format(ticket.createdAt, "d MMM", { locale: es })}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </Card>
+      {/* BARRA DE FILTROS */}
+      <div className="bg-card p-4 rounded-[2rem] border border-border/50 shadow-sm flex flex-col lg:flex-row items-center justify-between gap-4">
+        <div className="flex bg-secondary/30 p-1.5 rounded-full overflow-x-auto w-full lg:w-auto">
+          {filtros.map(f => (
+            <Link key={f.id} href={`/admin/soporte?filter=${f.id}${searchQuery ? `&q=${searchQuery}` : ''}`}>
+              <div className={`px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest cursor-pointer transition-all whitespace-nowrap ${currentFilter === f.id ? "bg-background text-foreground shadow-md" : "text-muted-foreground hover:text-foreground"}`}>
+                {f.label}
+              </div>
+            </Link>
+          ))}
+        </div>
+
+        <form method="GET" action="/admin/soporte" className="relative w-full lg:w-[400px]">
+          {currentFilter !== "ALL" && <input type="hidden" name="filter" value={currentFilter} />}
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input 
+            name="q" 
+            defaultValue={searchQuery}
+            placeholder="Buscar por palabra clave..." 
+            className="pl-12 h-12 rounded-full bg-secondary/20 border-transparent focus:bg-background"
+          />
+        </form>
+      </div>
+
+      {/* LISTA DE FAQS */}
+      {faqs.length === 0 ? (
+        <div className="h-64 flex flex-col items-center justify-center border-2 border-dashed border-border/50 rounded-[3rem] bg-card/30">
+          <HelpCircle className="text-muted-foreground/30 mb-4" size={48} />
+          <p className="text-lg font-black text-muted-foreground uppercase italic tracking-widest">No hay preguntas registradas</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {faqs.map((faq) => (
+            <FaqCard key={faq.id} faq={faq} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

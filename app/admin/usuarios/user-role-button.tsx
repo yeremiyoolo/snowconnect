@@ -1,40 +1,40 @@
 "use client";
 
+import { useState } from "react";
+import { toggleUserRole } from "@/actions/admin/user-actions";
 import { Button } from "@/components/ui/button";
-import { toggleUserRole } from "@/app/actions/user-actions";
-import { useTransition } from "react";
-import { ShieldAlert, ShieldCheck } from "lucide-react";
-import { useToast } from "@/hooks/use-toast"; // Asegúrate de tener este hook o usa alert
+import { ShieldCheck, ShieldAlert, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
-export function UserRoleButton({ userId, currentRole, isCurrentUser }: { userId: string, currentRole: string, isCurrentUser: boolean }) {
-    const [isPending, startTransition] = useTransition();
-    const { toast } = useToast();
+export default function UserRoleButton({ userId, currentRole }: { userId: string, currentRole: string }) {
+  const [loading, setLoading] = useState(false);
 
-    if (isCurrentUser) return <span className="text-xs text-gray-400">Tú</span>;
+  const handleToggle = async () => {
+    setLoading(true);
+    const res = await toggleUserRole(userId, currentRole);
+    setLoading(false);
 
-    const handleToggle = () => {
-        startTransition(async () => {
-           await toggleUserRole(userId, currentRole);
-           toast({
-             title: "Rol actualizado",
-             description: `El usuario ahora es ${currentRole === 'ADMIN' ? 'USER' : 'ADMIN'}`
-           });
-        });
-    };
+    if (res.success) {
+      toast.success(`Rol cambiado a ${res.newRole}`);
+    } else {
+      toast.error("Error al cambiar permisos");
+    }
+  };
 
-    return (
-        <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={handleToggle}
-            disabled={isPending}
-            className={currentRole === "ADMIN" ? "text-red-600 hover:text-red-700 hover:bg-red-50" : "text-blue-600 hover:text-blue-700 hover:bg-blue-50"}
-        >
-            {currentRole === "ADMIN" ? (
-                <><ShieldAlert className="w-4 h-4 mr-2"/> Revocar Admin</>
-            ) : (
-                <><ShieldCheck className="w-4 h-4 mr-2"/> Hacer Admin</>
-            )}
-        </Button>
-    );
+  return (
+    <Button 
+      variant={currentRole === "ADMIN" ? "default" : "outline"} 
+      size="sm"
+      disabled={loading}
+      onClick={handleToggle}
+      className={`rounded-full h-8 px-3 text-[10px] font-black uppercase tracking-widest gap-1.5 transition-all ${
+        currentRole === "ADMIN" 
+          ? "bg-primary text-white shadow-lg shadow-primary/20" 
+          : "text-muted-foreground border-border/50"
+      }`}
+    >
+      {loading ? <Loader2 size={12} className="animate-spin" /> : currentRole === "ADMIN" ? <ShieldCheck size={12}/> : <ShieldAlert size={12}/>}
+      {currentRole}
+    </Button>
+  );
 }

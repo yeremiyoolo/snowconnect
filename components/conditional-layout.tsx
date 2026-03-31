@@ -7,15 +7,22 @@ import { ComparisonBar } from "@/components/layout/comparison-bar";
 
 export default function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  // Ocultar Navbar y Footer si estamos en /auth (login o registro)
-  const isAuthPage = pathname?.startsWith("/auth");
+  
+  // 🍎 MANZANITA: Ocultamos Navbar, Footer y Comparador en auth, admin y en la PANTALLA DE ÉXITO
+  const hideLayout = 
+    pathname?.startsWith("/auth") || 
+    pathname?.startsWith("/admin") || 
+    pathname?.startsWith("/checkout/exito");
 
   return (
     <>
-      {!isAuthPage && <Navbar />}
-      {children}
-      {!isAuthPage && <ComparisonBar />}
-      {!isAuthPage && <Footer />}
+      {!hideLayout && <Navbar />}
+      
+      {/* El contenido de la página (children) siempre se muestra */}
+      <div className="flex-1">{children}</div>
+      
+      {!hideLayout && <ComparisonBar />}
+      {!hideLayout && <Footer />}
     </>
   );
 }

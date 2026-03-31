@@ -1,312 +1,64 @@
-"use client"
+import { prisma } from "@/lib/prisma";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ExportButton } from "@/components/admin/export-button";
+import { ProductosTable } from "@/components/admin/productos/productos-table";
 
-import { useEffect, useState } from "react"
-import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import Image from "next/image"
-import Link from "next/link"
+export const dynamic = 'force-dynamic';
 
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { 
-  Plus, 
-  Search, 
-  Edit, 
-  Trash2, 
-  ImageIcon
-} from "lucide-react"
-
-// Importamos tu botón de exportar
-import { ExportButton } from "@/components/admin/export-button"
-
-// 1. CORRECCIÓN EN EL TIPO: Agregamos 'almacenamiento'
-type Producto = {
-  id: string
-  imei: string
-  marca: string
-  modelo: string
-  color: string
-  almacenamiento: string // <--- NUEVO CAMPO (GB)
-  estado: string
-  precioCompra: number
-  precioVenta: number
-  margen?: number | null
-  fechaCompra: string
-  fechaVenta: string | null
-  fotosJson: string | null
-}
-
-export default function ProductosPage() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
-  const [productos, setProductos] = useState<Producto[]>([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState("")
-  const [filterEstado, setFilterEstado] = useState<string>("")
-
-  useEffect(() => {
-    if (status === "loading") return
-    if (!session || session.user.role !== "ADMIN") {
-      router.push("/auth/login")
-    } else {
-      fetchProductos()
+export default async function ProductosPage() {
+  // 1. OBTENER TODO EL INVENTARIO
+  // Traemos todo para poder ver los vendidos/ocultos y reactivarlos si queremos
+  const productos = await prisma.producto.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: {
+      imagenes: true,
+      variantes: true 
     }
-  }, [session, status, router])
+  });
 
-  const fetchProductos = async () => {
-    try {
-      const response = await fetch("/api/productos")
-      if (response.ok) {
-        const data = await response.json()
-        setProductos(data)
-      }
-    } catch (error) {
-      console.error("Error fetching productos:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const eliminarProducto = async (id: string) => {
-    if (!confirm("¿Estás seguro? Esta acción es irreversible.")) return
-    
-    try {
-      const response = await fetch(`/api/productos/${id}`, { method: "DELETE" })
-      if (response.ok) {
-        setProductos(productos.filter(p => p.id !== id))
-      } else {
-        alert("No se pudo eliminar")
-      }
-    } catch (error) {
-      alert("Error de conexión")
-    }
-  }
-
-  // --- Lógica para obtener la primera imagen ---
-  const getImagenPrincipal = (jsonString: string | null) => {
-    if (!jsonString) return null
-    try {
-      const fotos = JSON.parse(jsonString)
-      if (Array.isArray(fotos) && fotos.length > 0) {
-        return typeof fotos[0] === 'string' ? fotos[0] : fotos[0].url
-      }
-      return null
-    } catch {
-      return null
-    }
-  }
-
-  const filteredProductos = productos.filter((producto) => {
-    const term = search.toLowerCase()
-    const matchesSearch = 
-      (producto.marca || "").toLowerCase().includes(term) ||
-      (producto.modelo || "").toLowerCase().includes(term) ||
-      (producto.imei || "").includes(term) ||
-      (producto.color || "").toLowerCase().includes(term) ||
-      (producto.almacenamiento || "").toLowerCase().includes(term) // Buscar por GB
-    
-    const matchesEstado = !filterEstado || producto.estado === filterEstado
-    return matchesSearch && matchesEstado
-  })
-
-  // --- Preparar datos para Excel ---
-  const exportData = filteredProductos.map(p => {
-    const margenSeguro = p.margen ?? 0 
-    
-    return {
-      IMEI: p.imei,
-      Marca: p.marca,
-      Modelo: p.modelo,
-      Color: p.color,
-      Capacidad: p.almacenamiento, // <--- Agregado al Excel
-      Estado: p.estado,
-      Costo: p.precioCompra,
-      PrecioVenta: p.precioVenta,
-      Margen: `${margenSeguro.toFixed(2)}`,
-      FechaIngreso: p.fechaCompra ? new Date(p.fechaCompra).toLocaleDateString() : "Sin fecha"
-    }
-  })
-
-  if (loading) {
-    return (
-      <div className="h-[50vh] flex flex-col items-center justify-center text-gray-400">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-        Cargando inventario...
-      </div>
-    )
-  }
+  // Datos para exportar a Excel
+  const exportData = productos.map(p => ({
+    Modelo: p.modelo,
+    Marca: p.marca,
+    IMEI: p.imei || "N/A",
+    Condicion: p.condicion,
+    Precio: p.precioVenta,
+    Estado: p.estado
+  }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-[1600px] mx-auto p-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       
-      {/* Header */}
+      {/* Header Premium */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-2">
-            Inventario
-            <Badge variant="outline" className="text-gray-500 font-normal ml-2">
-              {productos.length} equipos
+          <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter italic text-foreground flex items-center gap-4 mb-1">
+            Inventario <span className="text-primary">Equipos</span>
+            <Badge className="bg-primary/10 text-primary hover:bg-primary/20 text-lg px-3 py-1">
+              {productos.length}
             </Badge>
           </h1>
-          <p className="text-gray-500 font-medium">Gestiona tu stock en tiempo real.</p>
+          <p className="text-muted-foreground font-bold uppercase text-xs tracking-[0.2em] opacity-80">
+            Control de stock único, IMEIs y visibilidad
+          </p>
         </div>
         
-        <div className="flex gap-2 w-full md:w-auto">
-          <ExportButton data={exportData} filename="inventario_snowconnect" label="Excel" />
-          <Button asChild className="bg-gray-900 text-white hover:bg-black shadow-lg shadow-gray-200 gap-2 w-full md:w-auto">
+        <div className="flex gap-3 w-full md:w-auto">
+          <ExportButton data={exportData} filename="inventario_snowconnect" label="Exportar Data" />
+          <Button asChild className="h-12 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest text-xs px-6 shadow-xl shadow-primary/20 transition-all hover:scale-105 active:scale-95 w-full md:w-auto">
             <Link href="/admin/productos/nuevo">
-              <Plus size={16} /> Nuevo Producto
+              <Plus size={18} className="mr-2" /> Agregar Equipo
             </Link>
           </Button>
         </div>
       </div>
 
-      {/* Filtros */}
-      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-center">
-        <div className="relative flex-1 w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Buscar por IMEI, Modelo, GB..."
-            className="pl-10 bg-gray-50 border-transparent focus:bg-white transition-all rounded-xl"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
-           {["", "NUEVO", "SEMINUEVO", "RECONDICIONADO"].map((estado) => (
-             <button
-                key={estado}
-                onClick={() => setFilterEstado(estado)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border ${
-                  filterEstado === estado 
-                    ? "bg-gray-900 text-white border-gray-900" 
-                    : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
-                }`}
-             >
-               {estado === "" ? "Todos" : estado}
-             </button>
-           ))}
-        </div>
-      </div>
-
-      {/* Tabla */}
-      <Card className="border-none shadow-sm ring-1 ring-gray-100 bg-white rounded-[1.5rem] overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-gray-50/50">
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="w-[80px] text-center">Foto</TableHead>
-                <TableHead>Dispositivo</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Finanzas</TableHead>
-                <TableHead>Fecha</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredProductos.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-32 text-center text-gray-500">
-                    No se encontraron productos.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredProductos.map((prod) => {
-                  const img = getImagenPrincipal(prod.fotosJson)
-                  const margenVal = prod.margen ?? 0;
-
-                  return (
-                    <TableRow key={prod.id} className="group hover:bg-gray-50/50 transition-colors">
-                      {/* FOTO */}
-                      <TableCell className="py-4">
-                        <div className="w-12 h-12 rounded-xl border border-gray-100 bg-white flex items-center justify-center overflow-hidden relative">
-                          {img ? (
-                            <Image src={img} alt={prod.modelo} fill className="object-cover" />
-                          ) : (
-                            <ImageIcon className="text-gray-200" size={20} />
-                          )}
-                        </div>
-                      </TableCell>
-                      
-                      {/* INFO + GB + COLOR */}
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <span className="font-bold text-gray-900 leading-tight">{prod.modelo}</span>
-                          <span className="text-xs text-gray-500 font-mono tracking-wide">{prod.imei}</span>
-                          
-                          {/* 2. CORRECCIÓN VISUAL: Badges para GB y Color */}
-                          <div className="flex gap-1 mt-1">
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-800">
-                              {prod.almacenamiento || "N/A"}
-                            </span>
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-800">
-                              {prod.color || "N/A"}
-                            </span>
-                          </div>
-                        </div>
-                      </TableCell>
-
-                      {/* ESTADO */}
-                      <TableCell>
-                         <Badge variant="secondary" className={`
-                            ${prod.estado === 'NUEVO' ? 'bg-emerald-100 text-emerald-700' : ''}
-                            ${prod.estado === 'SEMINUEVO' ? 'bg-amber-100 text-amber-700' : ''}
-                            ${prod.estado === 'RECONDICIONADO' ? 'bg-blue-100 text-blue-700' : ''}
-                            border-transparent font-bold
-                         `}>
-                           {prod.estado}
-                         </Badge>
-                      </TableCell>
-
-                      {/* FINANZAS */}
-                      <TableCell>
-                        <div className="flex flex-col">
-                           <span className="text-sm font-bold text-gray-900">
-                             ${prod.precioVenta.toLocaleString()}
-                           </span>
-                           <span className="text-[10px] text-gray-400">
-                             Costo: ${prod.precioCompra.toLocaleString()}
-                           </span>
-                           <span className={`text-[10px] font-bold ${margenVal > 0 ? 'text-green-600' : 'text-gray-400'}`}>
-                             Ganancia: ${margenVal.toLocaleString()}
-                           </span>
-                        </div>
-                      </TableCell>
-
-                      {/* FECHA */}
-                      <TableCell className="text-xs text-gray-500">
-                        {prod.fechaCompra ? new Date(prod.fechaCompra).toLocaleDateString() : "-"}
-                      </TableCell>
-
-                      {/* ACCIONES */}
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Link href={`/admin/productos/${prod.id}/editar`}>
-                            <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                              <Edit size={16} />
-                            </Button>
-                          </Link>
-                          <Button 
-                            size="icon" 
-                            variant="ghost" 
-                            className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50"
-                            onClick={() => eliminarProducto(prod.id)}
-                          >
-                            <Trash2 size={16} />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
+      {/* Renderiza la nueva tabla interactiva */}
+      <ProductosTable productos={productos} />
+      
     </div>
-  )
+  );
 }

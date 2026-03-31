@@ -3,21 +3,21 @@
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, ArrowLeftRight, HardDrive, Zap, Sparkles, ShieldAlert, X, LogIn, Scale, ShoppingCart, Loader2, Plus } from "lucide-react";
+import { Heart, ArrowLeftRight, HardDrive, Zap, Sparkles, ShieldAlert, X, LogIn, Scale, ShoppingCart, Loader2, Plus, Timer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-// Stores & Hooks
 import { useWishlistStore } from "@/lib/store/wishlist";
 import { useCompareStore } from "@/lib/store/compare";
-import { useCartStore } from "@/lib/store/cart";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 
-// Definición flexible del producto para evitar errores de TS estrictos
+// 🍎 Importamos el Botón Inteligente
+import { AddToCartButton } from "@/components/catalogo/add-to-cart-button";
+
 interface ProductCardProps {
   product: any;
   index: number;
@@ -28,15 +28,11 @@ export default function ProductCard({ product, index }: ProductCardProps) {
   const router = useRouter();
   const { toast } = useToast();
   
-  // Stores
   const wishlist = useWishlistStore();
   const compare = useCompareStore();
-  const cart = useCartStore();
   
   const [mounted, setMounted] = useState(false);
-  const [isAddingCart, setIsAddingCart] = useState(false);
   
-  // ESTADO UNIFICADO PARA LAS ALERTAS (Wishlist, Compare, Cart)
   const [authOverlay, setAuthOverlay] = useState<{ open: boolean; type: "wishlist" | "compare" | "cart" }>({ 
     open: false, 
     type: "wishlist" 
@@ -44,16 +40,13 @@ export default function ProductCard({ product, index }: ProductCardProps) {
 
   useEffect(() => { setMounted(true); }, []);
 
-  // --- LÓGICA DE DATOS ---
   const specs = product.specs || {};
   
-  // Formateo de almacenamiento
   let almacenamiento = specs.almacenamiento || product.almacenamiento;
   if (almacenamiento && !String(almacenamiento).toLowerCase().match(/(gb|tb)/)) {
     almacenamiento = `${almacenamiento} GB`;
   }
 
-  // Lógica de Batería
   const rawBat = product.bateria || specs.bateria || product.battery;
   const condicion = String(product.condicion || "").toLowerCase();
   let bateriaNumero: number | null = null;
@@ -65,22 +58,43 @@ export default function ProductCard({ product, index }: ProductCardProps) {
       if (!isNaN(num) && num > 0 && num <= 100) bateriaNumero = num;
     }
   }
-  // Si es nuevo/sellado y no tiene dato de batería, asumimos 100%
   if (bateriaNumero === null && (condicion.match(/(nuevo|new|sellado)/))) {
     bateriaNumero = 100;
   }
 
-  // Formateo de Precio
   const priceValue = Number(product.precioVenta || product.precio) || 0;
+  const now = new Date();
+  let ofertaActiva = null;
+
+  if (product.flashOffers && product.flashOffers.length > 0) {
+    ofertaActiva = product.flashOffers.find((o: any) => 
+      o.isActive === true && new Date(o.expiresAt) > now
+    );
+  }
+
+  let precioFinal = priceValue;
+  let porcentajeDescuento = 0;
+
+  if (ofertaActiva) {
+    porcentajeDescuento = ofertaActiva.discountPercent;
+    const descuentoDinero = priceValue * (porcentajeDescuento / 100);
+    precioFinal = priceValue - descuentoDinero;
+  }
+
   const formatPrice = (amount: number) => new Intl.NumberFormat("en-US", { 
     style: "decimal", 
     minimumFractionDigits: 0, 
     maximumFractionDigits: 0 
   }).format(amount);
 
-  // Lógica de Imagen
   let imageUrl = "/placeholder.png";
-  if (product.fotosJson) {
+  if (product.imagenes && product.imagenes.length > 0) {
+    if (typeof product.imagenes[0] === 'object' && product.imagenes[0].url) {
+      imageUrl = product.imagenes[0].url;
+    } else if (typeof product.imagenes[0] === 'string') {
+      imageUrl = product.imagenes[0];
+    }
+  } else if (product.fotosJson) {
     try {
       const parsed = JSON.parse(product.fotosJson);
       if (Array.isArray(parsed) && parsed.length > 0) imageUrl = parsed[0];
@@ -89,93 +103,51 @@ export default function ProductCard({ product, index }: ProductCardProps) {
     imageUrl = product.imagen;
   }
   
-  // Fallback visual si no hay imagen
   if (!imageUrl || imageUrl === "/placeholder.png") {
     imageUrl = "https://images.unsplash.com/photo-1592899677712-a5a254503484?q=80&w=1000&auto=format&fit=crop";
   }
 
-  // Estados de UI
   const isWishlisted = mounted ? wishlist.isInWishlist(product.id) : false;
   const isComparing = mounted ? compare.isInCompare(product.id) : false;
-  const isNew = index < 2; // Los primeros 2 se marcan como nuevos
+  const isNew = index < 2 && !ofertaActiva;
 
-  // --- HANDLERS CENTRALIZADOS ---
-  const handleAction = async (e: React.MouseEvent, type: "wishlist" | "compare" | "cart") => {
+  const handleAction = async (e: React.MouseEvent, type: "wishlist" | "compare") => {
       e.preventDefault(); 
       e.stopPropagation();
-      
-      // 🔒 BLOQUEO: Si no hay sesión, mostramos el overlay
+
+      if (type === "compare") {
+        if (isComparing) {
+          compare.removeItem(product.id);
+          toast({ description: "Removido de comparar" });
+        } else {
+          if (compare.items.length >= 3) return toast({ title: "Límite alcanzado (Máx 3)" });
+          compare.addItem({ ...product, imagen: imageUrl, precio: precioFinal });
+          toast({ title: "Agregado a comparar", className: "bg-cyan-600 text-white border-none" });
+        }
+        return; 
+      }
+
       if (!session) { 
         setAuthOverlay({ open: true, type }); 
         return; 
       }
 
-      // LÓGICA SI ESTÁ LOGUEADO
       if (type === "wishlist") {
           if (isWishlisted) {
             wishlist.removeItem(product.id);
             toast({ description: "Eliminado de favoritos" });
           } else {
-            wishlist.addItem({ ...product, imagen: imageUrl, precio: priceValue });
+            wishlist.addItem({ ...product, imagen: imageUrl, precio: precioFinal });
             toast({ description: "Guardado ❤️", className: "bg-pink-600 text-white border-none" });
           }
       } 
-      else if (type === "compare") {
-          if (isComparing) {
-            compare.removeItem(product.id);
-            toast({ description: "Removido de comparar" });
-          } else {
-            if (compare.items.length >= 3) return toast({ title: "Límite alcanzado (Máx 3)" });
-            compare.addItem({ ...product, imagen: imageUrl, precio: priceValue });
-            toast({ title: "Agregado a comparar", className: "bg-cyan-600 text-white border-none" });
-          }
-      }
-      else if (type === "cart") {
-          setIsAddingCart(true);
-          // Simular pequeño delay para feedback visual
-          await new Promise(r => setTimeout(r, 500));
-          
-          cart.addItem({ 
-            id: product.id, 
-            name: `${product.marca} ${product.modelo}`, 
-            price: priceValue, 
-            image: imageUrl, 
-            cantidad: 1 
-          });
-          
-          toast({ title: "¡Agregado al carrito!", className: "bg-blue-600 text-white border-none" });
-          setIsAddingCart(false);
-      }
   };
 
-  // --- CONFIGURACIÓN VISUAL DEL OVERLAY ---
   const overlayConfig = {
-    wishlist: { 
-      color: "text-pink-600", 
-      bg: "bg-pink-50 dark:bg-pink-900/20", 
-      btn: "from-pink-600 to-rose-600 shadow-pink-500/30", 
-      icon: ShieldAlert, 
-      title: "Favoritos", 
-      text: "Guarda productos para verlos después." 
-    },
-    compare: { 
-      color: "text-cyan-600", 
-      bg: "bg-cyan-50 dark:bg-cyan-900/20", 
-      btn: "from-cyan-600 to-blue-600 shadow-cyan-500/30", 
-      icon: Scale, 
-      title: "Comparar", 
-      text: "Compara características técnicas lado a lado." 
-    },
-    cart: { 
-      color: "text-blue-600", 
-      bg: "bg-blue-50 dark:bg-blue-900/20", 
-      btn: "from-blue-600 to-indigo-600 shadow-blue-500/30", 
-      icon: ShoppingCart, 
-      title: "Carrito", 
-      text: "Inicia sesión para poder comprar." 
-    }
+    wishlist: { color: "text-pink-600", bg: "bg-pink-50 dark:bg-pink-900/20", btn: "from-pink-600 to-rose-600 shadow-pink-500/30", icon: ShieldAlert, title: "Favoritos", text: "Guarda productos para verlos después." },
+    compare: { color: "text-cyan-600", bg: "bg-cyan-50 dark:bg-cyan-900/20", btn: "from-cyan-600 to-blue-600 shadow-cyan-500/30", icon: Scale, title: "Comparar", text: "Compara características técnicas lado a lado." },
+    cart: { color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-900/20", btn: "from-blue-600 to-indigo-600 shadow-blue-500/30", icon: ShoppingCart, title: "Carrito", text: "Inicia sesión para poder comprar." }
   };
-  
   const currentConfig = overlayConfig[authOverlay.type];
 
   return (
@@ -190,15 +162,24 @@ export default function ProductCard({ product, index }: ProductCardProps) {
           
           <Link href={`/catalogo/${product.id}`} className="group relative block h-full flex-1 flex flex-col">
             
-            {/* --- IMAGEN --- */}
             <div className="relative aspect-[4/5] overflow-hidden bg-secondary/30 p-6 flex items-center justify-center">
               {isNew && (
                 <Badge className="absolute top-4 left-4 z-10 bg-blue-600 text-white border-none shadow-lg px-2 py-0.5 text-[10px] font-black uppercase animate-pulse">
                   <Sparkles size={10} className="mr-1 inline-block" /> Nuevo
                 </Badge>
               )}
+
+              {ofertaActiva && (
+                 <div className="absolute top-4 left-4 z-10 flex flex-col gap-1 animate-in fade-in zoom-in duration-300">
+                    <Badge className="bg-red-600 text-white border-none shadow-lg px-2 py-1 text-xs font-black uppercase">
+                       <Timer size={12} className="mr-1 animate-pulse" /> Oferta Flash
+                    </Badge>
+                    <Badge className="bg-black text-white border-none self-start px-1.5 text-[10px] font-bold">
+                       -{porcentajeDescuento}%
+                    </Badge>
+                 </div>
+              )}
               
-              {/* Botones Flotantes (Wishlist / Compare) */}
               <div className="absolute top-4 right-4 z-20 flex flex-col gap-2 translate-x-10 opacity-0 group-hover/card:translate-x-0 group-hover/card:opacity-100 transition-all duration-300">
                   <button onClick={(e) => handleAction(e, "wishlist")} className={cn("w-9 h-9 rounded-full backdrop-blur-md flex items-center justify-center transition-all shadow-sm border border-white/20 hover:scale-110", isWishlisted ? "bg-white text-red-500" : "bg-white/60 text-zinc-600 hover:bg-white hover:text-red-500")}>
                     <Heart size={16} className={cn("transition-all", isWishlisted && "fill-current")} />
@@ -216,7 +197,6 @@ export default function ProductCard({ product, index }: ProductCardProps) {
               />
             </div>
 
-            {/* --- INFO --- */}
             <div className="p-5 flex flex-col flex-1 gap-2">
               <div>
                 <p className="text-[10px] font-bold text-blue-500 mb-0.5 uppercase tracking-wider">{product.marca || "Smartphone"}</p>
@@ -230,7 +210,6 @@ export default function ProductCard({ product, index }: ProductCardProps) {
                    </Badge>
                  )}
                  
-                 {/* Indicador de Batería */}
                  <div className="flex items-center gap-2 px-2 py-0.5 h-6 rounded-full bg-secondary/50 border border-border text-[10px] font-bold text-muted-foreground w-auto min-w-[80px]">
                      <Zap size={10} className={cn(bateriaNumero && bateriaNumero < 80 ? "text-yellow-500" : "text-green-500 fill-green-500")} />
                      {bateriaNumero ? (
@@ -249,31 +228,53 @@ export default function ProductCard({ product, index }: ProductCardProps) {
               <div className="mt-auto flex items-end justify-between border-t border-border pt-3">
                  <div className="flex flex-col">
                    <span className="text-[10px] font-bold text-muted-foreground uppercase">Precio</span>
-                   <div className="flex items-baseline gap-1">
-                     <span className="text-xs font-bold text-primary">$</span>
-                     <span className="text-xl font-black text-foreground tracking-tighter">{formatPrice(priceValue)}</span>
-                   </div>
+                   
+                   {ofertaActiva ? (
+                     <div className="flex flex-col leading-none">
+                        <span className="text-xs text-muted-foreground line-through decoration-red-500 decoration-2">
+                           ${formatPrice(priceValue)}
+                        </span>
+                        <div className="flex items-baseline gap-0.5">
+                           <span className="text-sm font-bold text-red-600">$</span>
+                           <span className="text-2xl font-black text-red-600 tracking-tighter">
+                              {formatPrice(precioFinal)}
+                           </span>
+                        </div>
+                     </div>
+                   ) : (
+                     <div className="flex items-baseline gap-1">
+                       <span className="text-xs font-bold text-primary">$</span>
+                       <span className="text-xl font-black text-foreground tracking-tighter">{formatPrice(priceValue)}</span>
+                     </div>
+                   )}
                  </div>
                  
-                 {/* BOTÓN "+" CARRITO INTEGRADO */}
-                 <Button 
-                    size="icon" 
-                    onClick={(e) => handleAction(e, "cart")} 
-                    disabled={isAddingCart || product.estado === "VENDIDO"} 
-                    className={cn(
-                      "rounded-full h-10 w-10 shadow-lg transition-all border-none ring-0 outline-none", 
-                      product.estado === "VENDIDO" 
-                        ? "bg-gray-100 text-gray-400 cursor-not-allowed" 
-                        : "bg-white text-blue-600 hover:bg-blue-600 hover:text-white hover:scale-110"
-                    )}
-                 >
-                    {isAddingCart ? <Loader2 className="h-4 w-4 animate-spin" /> : product.estado === "VENDIDO" ? <X className="h-4 w-4"/> : <Plus className="h-5 w-5 font-bold" />}
-                 </Button>
+                 {/* 🍎 BOTÓN DE CARRITO (Limpio y Único) */}
+                 {product.estado === "VENDIDO" ? (
+                    <Button 
+                      size="icon" 
+                      disabled 
+                      className="rounded-full h-10 w-10 bg-gray-100 text-gray-400 cursor-not-allowed border-none ring-0 outline-none"
+                    >
+                      <X className="h-4 w-4"/>
+                    </Button>
+                 ) : (
+                    <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                      <AddToCartButton 
+                        variant="icon" 
+                        product={{
+                          id: product.id,
+                          name: `${product.marca} ${product.modelo}`,
+                          price: precioFinal,
+                          image: imageUrl,
+                        }} 
+                      />
+                    </div>
+                 )}
               </div>
             </div>
           </Link>
 
-          {/* --- OVERLAY DE SEGURIDAD PREMIUM (LOGIN REQUERIDO) --- */}
           <AnimatePresence>
             {authOverlay.open && (
                 <motion.div 
@@ -285,36 +286,16 @@ export default function ProductCard({ product, index }: ProductCardProps) {
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
                 >
                     <button onClick={() => setAuthOverlay({ ...authOverlay, open: false })} className="absolute top-3 right-3 p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-muted-foreground transition-colors"><X size={18} /></button>
-                    
-                    {/* ICONO CON EFECTO GLOW */}
                     <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center mb-4 shadow-xl ring-1 ring-black/5 dark:ring-white/10", currentConfig.bg)}>
                         <currentConfig.icon size={28} className={currentConfig.color} />
                     </div>
-                    
-                    <h4 className="text-lg font-black mb-1 leading-tight text-foreground tracking-tight">
-                        {currentConfig.title}
-                    </h4>
-                    <p className="text-xs font-medium text-muted-foreground mb-6 px-1 leading-relaxed">
-                        {currentConfig.text}
-                    </p>
-
-                    {/* BOTONES */}
+                    <h4 className="text-lg font-black mb-1 leading-tight text-foreground tracking-tight">{currentConfig.title}</h4>
+                    <p className="text-xs font-medium text-muted-foreground mb-6 px-1 leading-relaxed">{currentConfig.text}</p>
                     <div className="flex flex-col w-full gap-3">
-                         <Button 
-                            onClick={() => router.push("/auth/login")} 
-                            className={cn(
-                                "w-full h-11 rounded-xl text-sm font-bold text-white shadow-lg transition-all hover:scale-[1.02] active:scale-95 bg-gradient-to-r border-0",
-                                currentConfig.btn
-                            )}
-                         >
+                         <Button onClick={() => router.push("/auth/login")} className={cn("w-full h-11 rounded-xl text-sm font-bold text-white shadow-lg bg-gradient-to-r border-0", currentConfig.btn)}>
                             <LogIn size={16} className="mr-2" /> Iniciar Sesión
                          </Button>
-                         
-                         <Button 
-                            variant="outline" 
-                            onClick={() => setAuthOverlay({ ...authOverlay, open: false })} 
-                            className="w-full h-11 rounded-xl text-xs font-bold border-2 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-foreground transition-colors uppercase tracking-wide"
-                         >
+                         <Button variant="outline" onClick={() => setAuthOverlay({ ...authOverlay, open: false })} className="w-full h-11 rounded-xl text-xs font-bold border-2 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-foreground transition-colors uppercase tracking-wide">
                             Cancelar
                          </Button>
                     </div>

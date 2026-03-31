@@ -8,7 +8,8 @@ import { ShoppingCart, Heart, Menu, Smartphone, Wrench, LogOut, Settings, Home, 
 import { Button } from "@/components/ui/button"; 
 import { cn } from "@/lib/utils"; 
 import { useState, useEffect } from "react";
-import { useCartStore } from "@/lib/store/cart"; 
+// 🔥 1. CAMBIAMOS AL NUEVO CARRITO
+import { useCart } from "@/hooks/use-cart"; 
 import { motion, AnimatePresence } from "framer-motion"; 
 import { useToast } from "@/hooks/use-toast";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
@@ -20,25 +21,28 @@ export function Navbar() {
   const { toast } = useToast();
   const [scrolled, setScrolled] = useState(false); 
   const [mounted, setMounted] = useState(false);
-  const cartItems = useCartStore((state) => state.items);
   
-  // ESTADO PARA CONTROLAR QUÉ TIPO DE ALERTA MOSTRAR (Wishlist = Pink, Cart = Blue)
+  // 🔥 2. LEEMOS LOS ITEMS DEL NUEVO CARRITO
+  const cartItems = useCart((state) => state.items);
+  
   const [modalConfig, setModalConfig] = useState<{ open: boolean; type: "wishlist" | "cart" }>({ open: false, type: "cart" });
 
   useEffect(() => { 
     setMounted(true); 
-    const handleScroll = () => setScrolled(window.scrollY > 20); 
-    window.addEventListener("scroll", handleScroll); 
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    }; 
+    window.addEventListener("scroll", handleScroll, { passive: true }); 
     return () => window.removeEventListener("scroll", handleScroll); 
   }, []);
   
-  const cartCount = mounted ? cartItems.reduce((acc, item) => acc + item.cantidad, 0) : 0;
+  // 🔥 3. SUMAMOS USANDO "quantity"
+  const cartCount = mounted ? cartItems.reduce((acc, item) => acc + item.quantity, 0) : 0;
 
-  // --- INTERCEPTOR INTELIGENTE ---
   const handleProtectedAction = (e: React.MouseEvent, type: "wishlist" | "cart") => {
     if (!session) { 
       e.preventDefault(); 
-      setModalConfig({ open: true, type }); // Guardamos si fue click en corazón o carrito
+      setModalConfig({ open: true, type }); 
     }
   };
 
@@ -46,7 +50,6 @@ export function Navbar() {
   const publicItems = [{ name: "Inicio", href: "/", icon: Home }, { name: "Catálogo", href: "/catalogo", icon: Smartphone }, { name: "Servicios", href: "/servicios", icon: Wrench }];
   const userItems = [{ name: "Vista General", href: "/account", icon: User }, { name: "Mis Pedidos", href: "/account/orders", icon: Package }, { name: "Mis Ventas", href: "/account/trade-in", icon: RefreshCcw }, { name: "Billetera", href: "/account/wallet", icon: CreditCard }, { name: "Ajustes", href: "/account", icon: Settings }];
 
-  // Variables dinámicas para el color del Modal
   const isWishlistModal = modalConfig.type === "wishlist";
   const modalColor = isWishlistModal ? "text-pink-600" : "text-blue-600";
   const modalBg = isWishlistModal ? "bg-pink-50 dark:bg-pink-900/20" : "bg-blue-50 dark:bg-blue-900/20";
@@ -58,31 +61,38 @@ export function Navbar() {
         initial={{ y: -100, opacity: 0 }} 
         animate={{ y: 0, opacity: 1 }} 
         transition={{ type: "spring", stiffness: 200, damping: 20 }} 
-        // OPTIMIZACIÓN AQUÍ: Se eliminó 'transition-all' y se añadió 'will-change-transform'
         className={cn(
-          "pointer-events-auto flex items-center justify-between gap-4 py-2 px-4 pl-5 rounded-full transition-colors duration-300 will-change-transform", 
-          scrolled 
-            ? "w-full max-w-5xl bg-blue-600 border border-blue-500 shadow-xl shadow-blue-900/20" 
-            : "w-full max-w-6xl bg-background/50 backdrop-blur-md border border-white/20 dark:border-white/10"
+          "pointer-events-auto flex items-center justify-between gap-4 py-2 px-4 pl-5 rounded-full transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]", 
+          scrolled ? "w-full max-w-5xl bg-blue-600/95 backdrop-blur-md border border-blue-500 shadow-xl shadow-blue-900/20" : "w-full max-w-6xl bg-background/50 backdrop-blur-md border border-white/20 dark:border-white/10"
         )}
       >
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className={cn("relative w-9 h-9 overflow-hidden rounded-full p-[1px] shadow-sm transition-all", scrolled ? "bg-white" : "bg-gradient-to-tr from-blue-500 to-cyan-400")}>
-               <div className="bg-white w-full h-full rounded-full flex items-center justify-center overflow-hidden"><Image src="/logo.png" alt="Snow Connect Logo" width={36} height={36} className="object-cover" /></div>
+            <div className="relative w-9 h-9 rounded-full p-[1px] shadow-sm">
+               <div className="absolute inset-0 bg-gradient-to-tr from-blue-500 to-cyan-400 rounded-full" />
+               <div className={cn("absolute inset-0 bg-white rounded-full transition-opacity duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]", scrolled ? "opacity-100" : "opacity-0")} />
+               <div className="relative bg-white w-full h-full rounded-full flex items-center justify-center overflow-hidden z-10">
+                 <Image src="/logo.png" alt="Snow Connect Logo" width={36} height={36} className="object-cover" />
+               </div>
             </div>
-            <span className="text-lg font-black tracking-tighter transition-colors hidden sm:block">
-              <span className={cn("transition-colors duration-300", scrolled ? "text-white" : "text-foreground")}>Snow</span><span className={cn("transition-colors duration-300", scrolled ? "text-black" : "text-blue-500")}>Connect</span>
+            <span className="text-lg font-black tracking-tighter hidden sm:block">
+              <span className={cn("transition-colors duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]", scrolled ? "text-white" : "text-foreground")}>Snow</span>
+              <span className={cn("transition-colors duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]", scrolled ? "text-black" : "text-blue-500")}>Connect</span>
             </span>
           </Link>
         </div>
 
-        <div className={cn("hidden lg:flex items-center gap-1 p-1 rounded-full border backdrop-blur-sm transition-colors", scrolled ? "bg-black/10 border-transparent" : "bg-background/30 border-white/10")}>
+        <div className={cn(
+            "hidden lg:flex items-center gap-1 p-1 rounded-full border backdrop-blur-md transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]", 
+            scrolled ? "bg-black/15 border-transparent" : "bg-background/30 border-white/10"
+        )}>
           {publicItems.map((item) => {
             const active = isActive(item.href);
             return (
               <Link key={item.name} href={item.href}>
-                <Button variant="ghost" size="sm" className={cn("rounded-full text-xs font-bold px-4 h-8 transition-all border-none ring-0 outline-none hover:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0", active ? (scrolled ? "bg-white text-black scale-110 shadow-none" : "bg-blue-600 text-white scale-110 shadow-none") : (scrolled ? "text-white hover:bg-white hover:text-black" : "text-foreground hover:bg-background/80 hover:text-primary"))}>{item.name}</Button>
+                <Button variant="ghost" size="sm" className={cn("rounded-full text-xs font-bold px-4 h-8 border-none ring-0 outline-none transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0", active ? (scrolled ? "bg-white text-black scale-105 shadow-none" : "bg-blue-600 text-white scale-105 shadow-none") : (scrolled ? "text-white hover:bg-white hover:text-black" : "text-foreground hover:bg-background/80 hover:text-primary"))}>
+                  {item.name}
+                </Button>
               </Link>
             );
           })}
@@ -90,45 +100,57 @@ export function Navbar() {
 
         <div className="flex items-center gap-2">
           {session?.user?.role === "ADMIN" && (
-            <Link href="/admin" className="hidden sm:flex"><Button variant="ghost" size="icon" className={cn("rounded-full w-9 h-9 transition-all duration-300 hover:scale-110", scrolled ? "text-yellow-300 hover:text-yellow-100" : "text-yellow-500 hover:text-yellow-400")}><Crown size={20} strokeWidth={2.5} /></Button></Link>
+            <Link href="/admin" className="hidden sm:flex">
+              <Button variant="ghost" size="icon" className={cn("rounded-full w-9 h-9 transition-colors duration-500", scrolled ? "text-yellow-300 hover:text-yellow-100" : "text-yellow-500 hover:text-yellow-400")}>
+                <Crown size={20} strokeWidth={2.5} />
+              </Button>
+            </Link>
           )}
 
-          {/* ❤️ CORAZÓN (WISHLIST) */}
           <Link href="/wishlist" onClick={(e) => handleProtectedAction(e, "wishlist")} className="relative hidden sm:flex">
-             <Button variant="ghost" size="icon" className={cn("rounded-full w-9 h-9 transition-colors !border-none !ring-0 !outline-none focus:ring-0 focus:outline-none focus-visible:ring-0 hover:bg-transparent shadow-none", isActive("/wishlist") ? "!bg-transparent text-red-500 scale-110" : (scrolled ? "text-white hover:text-red-200" : "text-foreground hover:text-red-500"))}>
-                <Heart className={cn("w-4 h-4", isActive("/wishlist") && "fill-current")} />
+             <Button variant="ghost" size="icon" className={cn("rounded-full w-9 h-9 transition-colors duration-500 !border-none !ring-0 !outline-none focus:ring-0 focus:outline-none hover:bg-transparent shadow-none", isActive("/wishlist") ? "!bg-transparent text-red-500 scale-110" : (scrolled ? "text-white hover:text-red-200" : "text-foreground hover:text-red-500"))}>
+                <Heart className={cn("w-4 h-4 transition-colors duration-500", isActive("/wishlist") && "fill-current")} />
              </Button>
           </Link>
 
-          {/* 🛒 CARRITO (CART) */}
           <Link href="/carrito" onClick={(e) => handleProtectedAction(e, "cart")} className="relative">
-             <Button variant="ghost" size="icon" className={cn("rounded-full w-9 h-9 transition-colors !border-none !ring-0 !outline-none focus:ring-0 focus:outline-none focus-visible:ring-0 hover:bg-transparent shadow-none", isActive("/carrito") ? (scrolled ? "!bg-transparent text-black scale-110" : "!bg-transparent text-blue-600 scale-110") : (scrolled ? "text-white hover:text-blue-200" : "text-foreground hover:text-blue-500"))}>
-                <ShoppingCart className={cn("w-4 h-4", isActive("/carrito") && "fill-current")} />
+             <Button variant="ghost" size="icon" className={cn("rounded-full w-9 h-9 transition-all duration-500 !border-none !ring-0 !outline-none focus:ring-0 focus:outline-none hover:bg-transparent shadow-none", isActive("/carrito") ? (scrolled ? "!bg-transparent text-black scale-110" : "!bg-transparent text-blue-600 scale-110") : (scrolled ? "text-white hover:text-blue-200" : "text-foreground hover:text-blue-500"))}>
+                <ShoppingCart className={cn("w-4 h-4 transition-colors duration-500", isActive("/carrito") && "fill-current")} />
              </Button>
              <AnimatePresence>
                {cartCount > 0 && (
-                 <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} className={cn("absolute -top-1 -right-1 h-5 w-5 rounded-full text-[10px] font-bold flex items-center justify-center border-none shadow-sm pointer-events-none", isActive("/carrito") ? (scrolled ? "bg-black text-white" : "bg-blue-600 text-white") : (scrolled ? "bg-white text-blue-600" : "bg-blue-600 text-white"))}>{cartCount}</motion.span>
+                 <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} className={cn("absolute -top-1 -right-1 h-5 w-5 rounded-full text-[10px] font-bold flex items-center justify-center border-none shadow-sm pointer-events-none transition-colors duration-500", isActive("/carrito") ? (scrolled ? "bg-black text-white" : "bg-blue-600 text-white") : (scrolled ? "bg-white text-blue-600" : "bg-blue-600 text-white"))}>
+                   {cartCount}
+                 </motion.span>
                )}
              </AnimatePresence>
           </Link>
 
-          <div className={cn("h-4 w-[1px] mx-1 transition-colors", scrolled ? "bg-white/20" : "bg-border")} />
+          <div className={cn("h-4 w-[1px] mx-1 transition-colors duration-500", scrolled ? "bg-white/30" : "bg-border")} />
 
           {session ? (
             <Link href="/account">
-               <div className={cn("w-9 h-9 rounded-full p-[2px] cursor-pointer hover:scale-105 transition-transform shadow-md", isActive("/account") ? "ring-2 ring-white !border-none" : "", scrolled ? "bg-white" : "bg-gradient-to-tr from-blue-600 to-purple-600")}>
-                 <div className="w-full h-full rounded-full bg-background flex items-center justify-center overflow-hidden text-foreground font-bold text-xs">
+               <div className={cn("w-9 h-9 rounded-full p-[2px] cursor-pointer hover:scale-105 transition-transform shadow-md relative", isActive("/account") ? "ring-2 ring-white !border-none" : "")}>
+                 <div className="absolute inset-0 bg-gradient-to-tr from-blue-600 to-purple-600 rounded-full" />
+                 <div className={cn("absolute inset-0 bg-white rounded-full transition-opacity duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]", scrolled ? "opacity-100" : "opacity-0")} />
+                 <div className="relative w-full h-full rounded-full bg-background flex items-center justify-center overflow-hidden text-foreground font-bold text-xs z-10">
                    {session.user?.image ? <Image src={session.user.image} alt="User" width={32} height={32} /> : session.user?.name?.[0] || "U"}
                  </div>
                </div>
             </Link>
           ) : (
-            <Link href="/auth/login" className="hidden sm:block"><Button size="sm" className={cn("rounded-full px-5 h-9 text-xs font-bold shadow-lg transition-colors", scrolled ? "bg-black text-white hover:bg-gray-900" : "bg-foreground text-background hover:bg-foreground/80")}>Entrar</Button></Link>
+            <Link href="/auth/login" className="hidden sm:block">
+              <Button size="sm" className={cn("rounded-full px-5 h-9 text-xs font-bold shadow-lg transition-colors duration-500", scrolled ? "bg-black text-white hover:bg-gray-900" : "bg-foreground text-background hover:bg-foreground/80")}>
+                Entrar
+              </Button>
+            </Link>
           )}
 
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className={cn("rounded-full w-9 h-9 ml-1 transition-colors", scrolled ? "text-white hover:bg-white/20" : "text-foreground hover:bg-secondary/80")}><Menu className="w-5 h-5" /></Button>
+              <Button variant="ghost" size="icon" className={cn("rounded-full w-9 h-9 ml-1 transition-colors duration-500", scrolled ? "text-white hover:bg-white/20" : "text-foreground hover:bg-secondary/80")}>
+                <Menu className="w-5 h-5" />
+              </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[350px] p-0 border-l-border bg-background/95 backdrop-blur-xl flex flex-col h-full text-foreground z-[60]">
               <SheetHeader className="p-6 border-b border-border text-left">
@@ -149,7 +171,6 @@ export function Navbar() {
             </SheetContent>
           </Sheet>
 
-          {/* --- MODAL DINÁMICO (ROSA o AZUL) --- */}
           {modalConfig.open && (
             <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
               <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setModalConfig({ ...modalConfig, open: false }); }} />

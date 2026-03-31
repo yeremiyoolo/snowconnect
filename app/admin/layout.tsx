@@ -7,16 +7,18 @@ import {
   LayoutDashboard, 
   Package, 
   ShoppingCart, 
+  ShoppingBag, 
   Users, 
   LogOut, 
-  Search,
   MessageSquare,
   ShieldAlert,
   RefreshCcw,
   Wrench,
-  MessageCircleQuestion 
+  MessageCircleQuestion,
+  TicketPercent, 
+  Zap,
+  ChevronRight            
 } from "lucide-react";
-import { CommandMenu } from "@/components/admin/command-menu"; 
 
 export default async function AdminLayout({
   children,
@@ -33,95 +35,95 @@ export default async function AdminLayout({
     <div className="flex min-h-screen bg-background font-sans text-foreground transition-colors duration-300">
       
       {/* --- SIDEBAR --- */}
-      <aside className="w-72 fixed inset-y-0 left-0 z-50 bg-card/80 backdrop-blur-xl border-r border-border shadow-lg shadow-black/5 flex flex-col transition-colors duration-300">
+      <aside className="w-80 fixed inset-y-0 left-0 z-50 bg-card/80 backdrop-blur-xl border-r border-border shadow-lg shadow-black/5 flex flex-col transition-colors duration-300">
         
-        {/* Header del Sidebar */}
-        <div className="p-8 pb-4">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="relative w-10 h-10 overflow-hidden rounded-xl border border-border shadow-sm group-hover:shadow-md transition-all duration-300 bg-background flex items-center justify-center">
-              <Image src="/logo.png" alt="SnowConnect" fill className="object-cover scale-110" />
-            </div>
-            <div className="flex flex-col leading-none">
-              <span className="text-lg font-black tracking-tight text-foreground uppercase transition-colors">
-                Snow<span className="text-muted-foreground">Admin</span>
-              </span>
+        {/* LOGO SNOWADMIN */}
+        <div className="p-6 pb-2">
+          <Link href="/" className="group block">
+            <div className="flex items-center gap-3.5 bg-secondary/40 p-4 rounded-[2.5rem] border border-border/40 shadow-sm transition-all duration-500 hover:bg-secondary/80 hover:border-primary/20 hover:shadow-xl hover:-translate-y-1 active:scale-95">
+              <div className="relative w-14 h-14 rounded-full bg-white p-0.5 flex items-center justify-center shadow-md border border-border/50 shrink-0 overflow-hidden">
+                <Image 
+                  src="/logo.png" 
+                  alt="SnowConnect" 
+                  width={80} 
+                  height={80} 
+                  className="object-contain w-full h-full transition-transform duration-500 group-hover:scale-105" 
+                  priority 
+                />
+              </div>
+              <div className="flex flex-col leading-none flex-1 overflow-hidden">
+                <div className="flex items-center gap-1">
+                  <span className="text-xl font-black tracking-tighter text-foreground italic uppercase truncate">
+                    Snow<span className="text-primary group-hover:animate-pulse">Admin</span>
+                  </span>
+                  <ChevronRight size={14} className="text-primary opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all shrink-0" />
+                </div>
+                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em] mt-1.5 opacity-70">
+                  Control Core
+                </span>
+              </div>
             </div>
           </Link>
         </div>
 
-        {/* Navegación */}
-        <nav className="flex-1 px-6 space-y-1.5 mt-6 overflow-y-auto custom-scrollbar">
-          
-          <p className="px-4 text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">Menu Principal</p>
+        {/* NAVEGACIÓN */}
+        <nav className="flex-1 px-6 space-y-1.5 mt-4 overflow-y-auto custom-scrollbar">
+          <p className="px-4 text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 mt-4 opacity-50">Menú Principal</p>
           <SidebarItem href="/admin" icon={<LayoutDashboard size={18} />} label="Resumen" />
           <SidebarItem href="/admin/productos" icon={<Package size={18} />} label="Inventario" />
-          <SidebarItem href="/admin/ventas" icon={<ShoppingCart size={18} />} label="Ventas" />
+          <SidebarItem href="/admin/ventas" icon={<ShoppingCart size={18} />} label="Ventas (Local)" />
+          <SidebarItem href="/admin/ordenes" icon={<ShoppingBag size={18} />} label="Pedidos (Web)" />
 
-          {/* SECCIÓN SERVICIOS (REORDENADA) */}
-          <p className="px-4 text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 mt-6">Servicios</p>
+          <p className="px-4 text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 mt-8 opacity-50">Servicios</p>
+          <SidebarItem href="/admin/quotes" icon={<RefreshCcw size={18} />} label="Cotizaciones" />
+          <SidebarItem href="/admin/reparaciones" icon={<Wrench size={18} />} label="Taller" />
+          <SidebarItem href="/admin/soporte" icon={<MessageCircleQuestion size={18} />} label="Ayuda" />
           
-          {/* 1. Trade-In */}
-          <SidebarItem href="/admin/quotes" icon={<RefreshCcw size={18} />} label="Cotizaciones (Trade-In)" />
-          
-          {/* 2. Taller */}
-          <SidebarItem href="/admin/reparaciones" icon={<Wrench size={18} />} label="Taller (Hardware)" />
-          
-          {/* 3. Soporte */}
-          <SidebarItem href="/admin/soporte" icon={<MessageCircleQuestion size={18} />} label="Mesa de Ayuda" />
-          
+          <p className="px-4 text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 mt-8 opacity-50">Gestión</p>
+          <SidebarItem href="/admin/usuarios" icon={<Users size={18} />} label="Clientes" />
 
-          {/* SECCIÓN GESTIÓN */}
-          <p className="px-4 text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 mt-6">Gestión</p>
-          <SidebarItem href="/admin/usuarios" icon={<Users size={18} />} label="Clientes & Staff" />
-
-          {/* SECCIÓN MARKETING */}
-          <p className="px-4 text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 mt-6">Marketing</p>
+          <p className="px-4 text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 mt-8 opacity-50">Marketing</p>
+          <SidebarItem href="/admin/cupones" icon={<TicketPercent size={18} />} label="Cupones" />
+          <SidebarItem href="/admin/ofertas-flash" icon={<Zap size={18} />} label="Ofertas Flash" />
           <SidebarItem href="/admin/marketing/testimonios" icon={<MessageSquare size={18} />} label="Reseñas" />
 
-          {/* SECCIÓN SEGURIDAD */}
-          <p className="px-4 text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 mt-6">Seguridad</p>
-          <SidebarItem href="/admin/auditoria" icon={<ShieldAlert size={18} />} label="Auditoría Logs" />
+          <p className="px-4 text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 mt-8 opacity-50">Seguridad</p>
+          <SidebarItem href="/admin/auditoria" icon={<ShieldAlert size={18} />} label="Auditoría" />
         </nav>
 
-        {/* Footer del Sidebar */}
-        <div className="p-6 border-t border-border">
-          <div className="bg-secondary/50 rounded-2xl p-4 flex items-center gap-3 mb-4 border border-border/50">
-             <div className="w-10 h-10 rounded-full bg-background shadow-sm flex items-center justify-center font-bold text-foreground text-sm border border-border">
+        {/* PERFIL */}
+        <div className="p-6 border-t border-border/50 bg-secondary/20 mt-auto">
+          <div className="bg-card/50 rounded-3xl p-4 flex items-center gap-3 mb-4 border border-border/50 shadow-sm overflow-hidden">
+             <div className="w-10 h-10 rounded-full bg-primary/10 shadow-inner flex items-center justify-center font-black text-primary text-xs border border-primary/20 shrink-0">
                 {session.user.name?.[0] || "A"}
              </div>
              <div className="overflow-hidden">
-                <p className="text-sm font-bold text-foreground truncate">{session.user.name}</p>
-                <p className="text-xs text-muted-foreground truncate">Administrador</p>
+                <p className="text-sm font-black text-foreground truncate uppercase italic tracking-tighter leading-none">{session.user.name}</p>
+                <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Master Admin</p>
              </div>
           </div>
-
-          <Link 
-             href="/api/auth/signout"
-             className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-bold text-red-500 hover:bg-red-500/10 transition-colors"
-          >
-            <LogOut size={16} />
-            Cerrar Sesión
+          <Link href="/api/auth/signout" className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-500/10 transition-all border border-transparent hover:border-red-500/20 active:scale-95">
+            <LogOut size={14} /> Cerrar Sesión
           </Link>
         </div>
       </aside>
 
-      {/* --- CONTENIDO PRINCIPAL --- */}
-      <main className="flex-1 ml-72">
-        <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-transparent dark:border-border/40 px-10 py-6 flex justify-between items-center transition-all duration-300">
+      {/* --- ÁREA DE CONTENIDO (Limpia sin buscador) --- */}
+      <main className="flex-1 ml-80 transition-all duration-300">
+        <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/40 px-10 py-8 flex justify-between items-center">
             <div>
-               <h1 className="text-2xl font-black text-foreground tracking-tight">Panel de Control</h1>
-               <p className="text-sm text-muted-foreground font-medium">Bienvenido de vuelta, {session.user.name?.split(' ')[0]}</p>
+               <h1 className="text-2xl font-black text-foreground tracking-tighter uppercase italic leading-none">Panel de <span className="text-primary">Control</span></h1>
+               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mt-1.5">Bienvenido de vuelta, {session.user.name?.split(' ')[0]}</p>
             </div>
             
-            <div className="w-full max-w-md">
-                <div className="bg-card border border-border shadow-sm rounded-full px-4 py-2 flex items-center gap-2 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
-                    <Search size={16} className="text-muted-foreground" />
-                    <div className="w-full"><CommandMenu /></div>
-                </div>
+            {/* El buscador ha sido removido de aquí para un diseño más limpio */}
+            <div className="flex items-center gap-4">
+              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Sistema Operativo</span>
             </div>
         </header>
 
-        <div className="px-10 pb-10 mt-6">
+        <div className="px-10 pb-20 mt-8">
           {children}
         </div>
       </main>
@@ -129,16 +131,10 @@ export default async function AdminLayout({
   );
 }
 
-// Helper para los botones del menú
 function SidebarItem({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
   return (
-    <Link 
-      href={href} 
-      className="flex items-center gap-3 px-5 py-3.5 rounded-[1.2rem] text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary hover:shadow-sm transition-all duration-200 group border border-transparent hover:border-border/50"
-    >
-      <span className="text-muted-foreground/70 group-hover:text-primary transition-colors group-hover:scale-110 transform duration-200">
-        {icon}
-      </span>
+    <Link href={href} className="flex items-center gap-3.5 px-5 py-3.5 rounded-[1.5rem] text-[11px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-secondary/80 hover:shadow-sm transition-all duration-300 group border border-transparent hover:border-border/50">
+      <span className="text-muted-foreground/50 group-hover:text-primary transition-all group-hover:scale-110">{icon}</span>
       {label}
     </Link>
   );

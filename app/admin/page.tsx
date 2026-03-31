@@ -1,247 +1,256 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { OverviewChart } from "@/components/admin/overview-chart";
-import { 
-  DollarSign, 
-  Users, 
-  TrendingUp, 
-  Sparkles,
-  Smartphone,
-  CreditCard,
-  ShoppingBag,
-  ArrowUpRight,
-  Activity
-} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Smartphone, DollarSign, Activity, Wrench, Package, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"; 
-import { cn } from "@/lib/utils";
 
-export default async function AdminPage() {
-  const session = await getServerSession(authOptions);
+export const dynamic = 'force-dynamic';
+
+export default async function AdminDashboard() {
+  // 1. EXTRAER TODOS LOS DATOS REALES DE LA BASE DE DATOS
+  const totalProductos = await prisma.producto.count();
   
-  if (!session?.user || session.user.role !== "ADMIN") {
-    redirect("/auth/login");
+  const reparacionesActivas = await prisma.repairTicket.count({
+    where: { status: { notIn: ["COMPLETADA", "CANCELADA", "COMPLETED", "CANCELLED"] } }
+  });
+
+  // 🍎 MANZANITA: Unificamos las ventas (Web + Tienda Física)
+  const ordenesPagadas = await prisma.order.findMany({
+    where: { status: "PAID" },
+    select: { id: true, total: true, createdAt: true, carrier: true }
+  });
+
+  const ventasFisicas = await prisma.venta.findMany({
+    select: { id: true, precioVenta: true, createdAt: true }
+  });
+
+  // Juntamos todo en un solo arreglo ordenado por fecha
+  const ventas = [
+    ...ordenesPagadas.map(o => ({ 
+      id: o.id, 
+      total: o.total, 
+      createdAt: o.createdAt, 
+      metodo: o.carrier || "Web / Transferencia" 
+    })),
+    ...ventasFisicas.map(v => ({ 
+      id: v.id, 
+      total: v.precioVenta, 
+      createdAt: v.createdAt, 
+      metodo: "Tienda Física" 
+    }))
+  ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+  const totalVentas = ventas.length;
+  const ingresosTotales = ventas.reduce((acc, v) => acc + v.total, 0);
+
+  // Ventas recientes (las 5 más nuevas)
+  const ventasRecientes = ventas.slice(0, 5);
+
+  // --- 2. EL MOTOR DE CÁLCULO DE FLUJO (REAL) ---
+  const hoy = new Date();
+  
+  // Arreglos de sumatoria
+  const annualMap = new Array(12).fill(0);
+  const monthlyWeeks = [0, 0, 0, 0];
+  const weeklyMap = new Map();
+
+  // Límites de tiempo
+  const last30Days = new Date(hoy.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const last7Days = new Date(hoy.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  // Inicializar mapa de 7 días (Ordenados de hoy hacia atrás)
+  for(let i=6; i>=0; i--) {
+    const d = new Date(hoy.getTime() - i * 24 * 60 * 60 * 1000);
+    const dayStr = d.toLocaleDateString('es-ES', { weekday: 'short' }).replace('.', '');
+    const cleanDay = dayStr.charAt(0).toUpperCase() + dayStr.slice(1);
+    weeklyMap.set(cleanDay, 0);
   }
 
-  // 🧠 CARGA DE DATOS TURBO (Promise.all)
-  const [stockCount, userCount, totalSalesData, recentSales] = await Promise.all([
-    prisma.producto.count({ where: { estado: "DISPONIBLE" } }),
-    prisma.user.count(),
-    prisma.venta.aggregate({ _sum: { precioVenta: true } }),
-    prisma.venta.findMany({
-      take: 6, 
-      orderBy: { createdAt: 'desc' },
-      include: { user: true, producto: true }
-    })
-  ]);
+  // Recorremos todas las ventas (Web + Físicas) y las sumamos a su tiempo
+  ventas.forEach(v => {
+    const date = new Date(v.createdAt);
+    
+    // Anual (Mismo año)
+    if (date.getFullYear() === hoy.getFullYear()) {
+       annualMap[date.getMonth()] += v.total;
+    }
+    
+    // Semanal (Últimos 7 días)
+    if (date >= last7Days) {
+       const dayStr = date.toLocaleDateString('es-ES', { weekday: 'short' }).replace('.', '');
+       const cleanDay = dayStr.charAt(0).toUpperCase() + dayStr.slice(1);
+       if(weeklyMap.has(cleanDay)) {
+         weeklyMap.set(cleanDay, weeklyMap.get(cleanDay) + v.total);
+       }
+    }
+    
+    // Mensual (Últimos 30 días divididos en 4 semanas)
+    if (date >= last30Days) {
+       const diffTime = Math.abs(hoy.getTime() - date.getTime());
+       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+       if (diffDays <= 7) monthlyWeeks[3] += v.total;        // Semana actual
+       else if (diffDays <= 14) monthlyWeeks[2] += v.total;  // Semana anterior
+       else if (diffDays <= 21) monthlyWeeks[1] += v.total;  // Hace 2 semanas
+       else if (diffDays <= 30) monthlyWeeks[0] += v.total;  // Hace 3 semanas
+    }
+  });
 
-  const totalRevenue = totalSalesData._sum.precioVenta || 0;
-
-  // Datos Dummy (Placeholder para gráfico)
-  const chartData = [
-    { name: "Ene", total: Math.floor(totalRevenue * 0.1) },
-    { name: "Feb", total: Math.floor(totalRevenue * 0.15) },
-    { name: "Mar", total: Math.floor(totalRevenue * 0.4) },
-    { name: "Abr", total: Math.floor(totalRevenue * 0.2) },
-    { name: "May", total: Math.floor(totalRevenue * 0.15) },
+  // Formatear los datos para el componente del gráfico
+  const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+  const annualData = meses.map((name, i) => ({ name, total: annualMap[i] }));
+  const weeklyData = Array.from(weeklyMap, ([name, total]) => ({ name, total }));
+  const monthlyData = [
+    { name: "Hace 3 Sem", total: monthlyWeeks[0] },
+    { name: "Hace 2 Sem", total: monthlyWeeks[1] },
+    { name: "Sem Pasada", total: monthlyWeeks[2] },
+    { name: "Esta Sem", total: monthlyWeeks[3] },
   ];
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
   return (
-    // CORRECCIÓN PRINCIPAL: Añadimos 'min-h-screen bg-background' al contenedor padre.
-    // Esto asegura que TODA la página reaccione al tema oscuro, no solo las tarjetas.
-    <div className="min-h-screen bg-background text-foreground pb-20 relative overflow-hidden">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 p-6 max-w-[1600px] mx-auto">
       
-      {/* --- EFECTO DE FONDO AMBIENTAL (CREATIVO) --- */}
-      {/* Una luz sutil en el fondo que cambia de color según el tema */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-blue-500/5 dark:bg-blue-500/10 blur-[120px] rounded-full pointer-events-none" />
-
-      {/* CONTENEDOR PRINCIPAL */}
-      <div className="max-w-7xl mx-auto px-6 pt-8 space-y-8 relative z-10">
-        
-        {/* --- 1. HERO CARD (ESTILO FUTURISTA) --- */}
-        <div className="relative overflow-hidden rounded-[2.5rem] bg-zinc-950 text-white p-10 shadow-2xl shadow-blue-900/10 group border border-white/5">
-          {/* Decoración Neon Animada */}
-          <div className="absolute top-0 right-0 -mt-20 -mr-20 w-80 h-80 bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-600 rounded-full blur-[80px] opacity-40 group-hover:opacity-60 transition-opacity duration-1000 animate-pulse"></div>
-          
-          <div className="relative z-10">
-            <div className="flex items-center gap-2 text-blue-400 font-bold text-xs uppercase tracking-widest mb-3">
-              <Sparkles size={14} className="text-yellow-400" /> Centro de Comando
-            </div>
-            <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-2">
-              Hola, {session.user.name?.split(' ')[0]} 👋
-            </h1>
-            <p className="text-zinc-400 font-medium text-lg max-w-lg">
-              Monitorizando operaciones en tiempo real.
-            </p>
-          </div>
-        </div>
-
-        {/* --- 2. KPI CARDS (BENTO GRID) --- */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <BentoCard 
-            title="Ingresos Totales" 
-            value={formatCurrency(totalRevenue)} 
-            icon={<DollarSign size={24} className="text-white" />}
-            gradient="bg-gradient-to-br from-blue-600 to-indigo-600"
-            trend="+12%"
-            trendColor="text-blue-600 bg-blue-500/10 dark:text-blue-300"
-          />
-          <BentoCard 
-            title="Usuarios" 
-            value={userCount.toString()} 
-            icon={<Users size={24} className="text-white" />}
-            gradient="bg-gradient-to-br from-purple-600 to-pink-600"
-            trend={`+${userCount} nuevos`}
-            trendColor="text-purple-600 bg-purple-500/10 dark:text-purple-300"
-          />
-          <BentoCard 
-            title="Inventario" 
-            value={stockCount.toString()} 
-            icon={<Smartphone size={24} className="text-white" />}
-            gradient="bg-gradient-to-br from-orange-500 to-red-500"
-            trend="En Stock"
-            trendColor="text-orange-600 bg-orange-500/10 dark:text-orange-300"
-          />
-          <BentoCard 
-            title="Actividad" 
-            value="Alta" 
-            icon={<Activity size={24} className="text-white" />}
-            gradient="bg-gradient-to-br from-emerald-500 to-teal-600"
-            trend="Estable"
-            trendColor="text-emerald-600 bg-emerald-500/10 dark:text-emerald-300"
-          />
-        </div>
-
-        {/* --- 3. SECCIÓN PRINCIPAL (GRÁFICO + LISTA) --- */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 items-stretch">
-          
-          {/* GRÁFICO (Panel Izquierdo) */}
-          <div className="xl:col-span-2 flex flex-col h-full bg-card rounded-[2.5rem] p-8 border border-border shadow-sm hover:shadow-xl hover:shadow-black/5 transition-all duration-300">
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h3 className="text-xl font-black text-foreground tracking-tight">Análisis Financiero</h3>
-                <p className="text-sm text-muted-foreground font-medium">Flujo de caja mensual</p>
-              </div>
-              {/* Indicadores decorativos */}
-              <div className="flex gap-2">
-                  <div className="h-2.5 w-2.5 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50"></div>
-                  <div className="h-2.5 w-2.5 rounded-full bg-purple-500 shadow-sm shadow-purple-500/50"></div>
-              </div>
-            </div>
-            
-            <div className="flex-1 w-full min-h-[300px]">
-              <OverviewChart data={chartData} />
-            </div>
-          </div>
-
-          {/* ÚLTIMAS VENTAS (Panel Derecho) */}
-          <div className="flex flex-col h-full bg-card rounded-[2.5rem] p-8 border border-border shadow-sm hover:shadow-xl hover:shadow-black/5 transition-all duration-300 relative overflow-hidden">
-              
-              <div className="flex items-center justify-between mb-6 z-10">
-                  <h3 className="text-xl font-black text-foreground tracking-tight">Transacciones</h3>
-                  <Link href="/admin/ventas" className="group flex items-center gap-1 text-xs font-bold text-muted-foreground hover:text-blue-500 transition-colors">
-                    Ver todo <ArrowUpRight size={14} className="group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform"/>
-                  </Link>
-              </div>
-              
-              <div className="flex-1 overflow-y-auto pr-2 -mr-3 space-y-3 custom-scrollbar z-10">
-                  {recentSales.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground py-10 opacity-50">
-                          <ShoppingBag size={40} className="mb-3" />
-                          <p className="text-sm font-medium">Sin movimientos recientes</p>
-                      </div>
-                  ) : (
-                      recentSales.map((venta) => (
-                          <div key={venta.id} className="flex items-center gap-4 p-3 rounded-2xl bg-background/50 hover:bg-secondary transition-all border border-transparent hover:border-border group cursor-default">
-                              {/* Icono Producto */}
-                              <div className="w-12 h-12 rounded-2xl bg-card text-2xl flex items-center justify-center border border-border shadow-sm group-hover:scale-105 transition-transform">
-                                  {venta.producto.marca === "Apple" ? "🍎" : "📱"}
-                              </div>
-                              
-                              {/* Info */}
-                              <div className="flex-1 min-w-0">
-                                  <h4 className="text-sm font-bold text-foreground truncate">{venta.producto.modelo}</h4>
-                                  <div className="flex items-center gap-1.5 mt-0.5">
-                                     <Avatar className="w-4 h-4 border border-border">
-                                        <AvatarFallback className="text-[9px] bg-gradient-to-tr from-blue-100 to-blue-200 text-blue-700 dark:from-blue-900 dark:to-blue-800 dark:text-blue-200 font-black">
-                                          {venta.user.name?.[0]}
-                                        </AvatarFallback>
-                                     </Avatar>
-                                     <p className="text-xs text-muted-foreground truncate font-medium">{venta.user.name?.split(' ')[0]}</p>
-                                  </div>
-                              </div>
-                              
-                              {/* Precio y Estado */}
-                              <div className="text-right">
-                                  <span className="block text-sm font-black text-foreground">
-                                    ${venta.precioVenta.toLocaleString("en-US")}
-                                  </span>
-                                  <span className="text-[10px] font-bold text-green-600 bg-green-500/10 px-2 py-0.5 rounded-full inline-block mt-1">
-                                    Completado
-                                  </span>
-                              </div>
-                          </div>
-                      ))
-                  )}
-              </div>
-
-              {/* Botón de Acción Fijo */}
-              <div className="mt-6 pt-4 border-t border-border z-10">
-                  <Link 
-                    href="/admin/ventas/nueva"
-                    className="flex items-center justify-center w-full py-3.5 rounded-xl bg-foreground text-background font-bold text-sm shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all duration-300"
-                  >
-                    <CreditCard size={16} className="mr-2" />
-                    Nueva Venta
-                  </Link>
-              </div>
-          </div>
-
-        </div>
+      {/* Cabecera Premium */}
+      <div>
+        <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter italic text-foreground mb-1">
+          Panel <span className="text-primary">General</span>
+        </h1>
+        <p className="text-muted-foreground font-bold uppercase text-xs tracking-[0.2em] opacity-80">
+          Resumen en tiempo real de métricas y flujo de caja
+        </p>
       </div>
+
+      {/* 4 Tarjetas de Métricas Generales */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        
+        <Card className="rounded-[2.5rem] border-border/50 shadow-2xl bg-gradient-to-br from-card to-secondary/20 hover:scale-[1.02] transition-transform duration-300">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              Ingresos Reales
+            </CardTitle>
+            <div className="w-12 h-12 rounded-2xl bg-green-500/10 text-green-500 flex items-center justify-center">
+              <DollarSign size={24} />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-4xl font-black italic tracking-tighter text-foreground">
+              ${ingresosTotales >= 1000000 ? (ingresosTotales/1000000).toFixed(1) + 'M' : ingresosTotales.toLocaleString()}
+            </div>
+            <p className="text-[10px] text-green-600 font-black mt-2 uppercase tracking-widest bg-green-500/10 w-fit px-3 py-1 rounded-full">
+              RD$ Cobrados
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-[2.5rem] border-border/50 shadow-2xl bg-gradient-to-br from-card to-secondary/20 hover:scale-[1.02] transition-transform duration-300">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              Equipos Vendidos
+            </CardTitle>
+            <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
+              <Activity size={24} />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-4xl font-black italic tracking-tighter text-foreground">{totalVentas}</div>
+            <p className="text-[10px] text-muted-foreground font-black mt-2 uppercase tracking-widest opacity-60">
+              Transacciones
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-[2.5rem] border-border/50 shadow-2xl bg-gradient-to-br from-card to-secondary/20 hover:scale-[1.02] transition-transform duration-300">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              Stock Total
+            </CardTitle>
+            <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-500 flex items-center justify-center">
+              <Smartphone size={24} />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-4xl font-black italic tracking-tighter text-foreground">{totalProductos}</div>
+            <p className="text-[10px] text-muted-foreground font-black mt-2 uppercase tracking-widest opacity-60">
+              Dispositivos
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-[2.5rem] border-border/50 shadow-2xl bg-gradient-to-br from-card to-secondary/20 hover:scale-[1.02] transition-transform duration-300">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              Reparaciones
+            </CardTitle>
+            <div className="w-12 h-12 rounded-2xl bg-orange-500/10 text-orange-500 flex items-center justify-center">
+              <Wrench size={24} />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-4xl font-black italic tracking-tighter text-foreground">{reparacionesActivas}</div>
+            <p className="text-[10px] text-muted-foreground font-black mt-2 uppercase tracking-widest opacity-60">
+              Equipos en Taller
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
+        {/* Gráfico de Flujo de Ingresos */}
+        <Card className="col-span-4 rounded-[3rem] border-border/50 shadow-2xl bg-card">
+          <CardHeader className="px-8 pt-8">
+            <CardTitle className="text-2xl font-black uppercase italic tracking-tighter">Flujo de Caja</CardTitle>
+            <CardDescription className="text-xs font-bold uppercase tracking-widest opacity-60 mt-1">
+              Dinero real facturado a lo largo del tiempo
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-4 pb-8">
+            <OverviewChart weekly={weeklyData} monthly={monthlyData} annual={annualData} />
+          </CardContent>
+        </Card>
+
+        {/* Tarjeta Lateral de Últimas Ventas */}
+        <Card className="col-span-3 rounded-[3rem] border-border/50 shadow-2xl flex flex-col bg-card overflow-hidden">
+          <CardHeader className="px-8 pt-8 pb-4 bg-secondary/20">
+            <CardTitle className="text-2xl font-black uppercase italic tracking-tighter flex items-center justify-between">
+              Ventas Recientes
+              <Link href="/admin/ventas" className="text-[10px] font-bold uppercase tracking-widest text-primary hover:underline flex items-center bg-primary/10 px-3 py-1.5 rounded-full">
+                Ver Todo <ArrowUpRight size={14} className="ml-1" />
+              </Link>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 flex flex-col gap-3 p-6 bg-secondary/5">
+            {ventasRecientes.length > 0 ? (
+              ventasRecientes.map((venta) => (
+                <div key={venta.id} className="flex items-center justify-between p-5 rounded-[2rem] bg-white dark:bg-zinc-900 shadow-sm border border-border/40 hover:border-primary/50 hover:shadow-xl transition-all group">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-secondary/50 text-foreground flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                      <Package size={20} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-black uppercase tracking-tight italic">
+                        {venta.metodo}
+                      </p>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">
+                        {new Date(venta.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-black text-green-600 italic tracking-tighter">
+                      +RD$ {venta.total.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="flex-1 flex items-center justify-center flex-col opacity-30 mt-10">
+                <Package size={64} className="mb-4" />
+                <p className="text-xs font-black uppercase tracking-widest text-center max-w-[200px]">Aún no hay ventas registradas</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
     </div>
   );
-}
-
-// --- BENTO CARD REUTILIZABLE (MEJORADO) ---
-function BentoCard({ title, value, icon, gradient, trend, trendColor }: any) {
-  return (
-    <div className="group bg-card rounded-[2.5rem] p-6 border border-border shadow-sm hover:shadow-xl hover:shadow-blue-500/5 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
-        
-        {/* Efecto de brillo al pasar el mouse */}
-        <div className="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent dark:from-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
-        
-        <div className="relative flex flex-col h-full justify-between gap-4">
-            <div className="flex justify-between items-start">
-                <div className={cn(
-                    "w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-110",
-                    gradient
-                )}>
-                    {icon}
-                </div>
-                <span className={cn(
-                    "text-[10px] font-bold px-2.5 py-1 rounded-full border border-transparent backdrop-blur-sm",
-                    trendColor
-                )}>
-                    {trend}
-                </span>
-            </div>
-            <div>
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 opacity-70">{title}</p>
-                <h3 className="text-3xl font-black text-foreground tracking-tight">{value}</h3>
-            </div>
-        </div>
-    </div>
-  )
 }

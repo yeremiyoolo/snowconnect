@@ -1,9 +1,19 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+// Definimos una interfaz clara para los productos en comparación
+interface CompareItem {
+  id: string;
+  name: string;
+  image: string;
+  price: number;
+  marca?: string;
+  modelo?: string;
+}
+
 interface CompareStore {
-  items: any[];
-  addItem: (item: any) => void;
+  items: CompareItem[];
+  addItem: (item: CompareItem) => void;
   removeItem: (id: string) => void;
   isInCompare: (id: string) => boolean;
   clearCompare: () => void;
@@ -15,7 +25,6 @@ export const useCompareStore = create<CompareStore>()(
       items: [],
       addItem: (item) => {
         const currentItems = get().items;
-        // Máximo 3 productos para comparar
         if (currentItems.length >= 3) return; 
         
         const exists = currentItems.find((i) => i.id === item.id);
@@ -32,7 +41,7 @@ export const useCompareStore = create<CompareStore>()(
       clearCompare: () => set({ items: [] }),
     }),
     {
-      name: 'snow-compare-storage',
+      name: 'snow-compare-storage', // Nombre de la cookie/localStorage
     }
   )
 );

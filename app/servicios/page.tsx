@@ -7,7 +7,8 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Smartphone, Wrench, ArrowRight, RefreshCcw, Battery, Zap, Database, 
-  ShieldCheck, MessagesSquare, ChevronRight, X, Loader2, CheckCircle2 
+  ShieldCheck, MessagesSquare, ChevronRight, X, Loader2, CheckCircle2,
+  Wallet, Banknote // Agregados iconos nuevos
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,7 +38,6 @@ export default function ServiciosPage() {
       setTimeout(() => {
         setSuccess(false);
         setSelectedService(null);
-        // ✅ CORRECCIÓN: Ahora redirige a la sección de reparaciones
         router.push("/account/repairs"); 
       }, 2000);
     } else {
@@ -69,49 +69,41 @@ export default function ServiciosPage() {
         {/* 2. BENTO GRID PRINCIPAL */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             
-            {/* --- CARD 1: TRADE-IN --- */}
-            <div className="relative overflow-hidden rounded-[2.5rem] bg-card p-10 md:p-12 min-h-[550px] flex flex-col justify-between group cursor-pointer shadow-2xl shadow-black/5 border border-border/60 hover:border-primary/30 transition-all duration-500 hover:-translate-y-1">
-               <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-secondary/30 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-               <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-blue-500/5 rounded-full blur-3xl -z-10" />
-
-               <div className="relative z-10">
-                 <div className="w-16 h-16 bg-background/80 backdrop-blur-md rounded-2xl flex items-center justify-center mb-8 shadow-sm border border-white/10 dark:border-white/5 text-blue-600 group-hover:scale-110 transition-transform">
-                    <RefreshCcw size={30} />
+            {/* --- CARD 1: TRADE-IN (ESTILO DARK HOME) --- */}
+            <div className="relative overflow-hidden rounded-[2.5rem] bg-black border border-white/10 p-10 md:p-12 min-h-[550px] flex flex-col justify-end text-center items-center group cursor-pointer shadow-2xl hover:shadow-green-500/10 transition-all duration-500 hover:-translate-y-1">
+               <div 
+                  className="absolute inset-0 bg-cover bg-center opacity-50 group-hover:opacity-30 group-hover:scale-105 transition-all duration-700"
+                  style={{ 
+                    backgroundImage: "url('https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1740&auto=format&fit=crop')" 
+                  }}
+               />
+               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
+               
+               <div className="relative z-10 w-full flex flex-col items-center">
+                 <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center mb-6 shadow-inner border border-white/20 group-hover:scale-110 transition-transform duration-500">
+                    <RefreshCcw className="w-10 h-10 text-green-400 group-hover:rotate-180 transition-transform duration-700 ease-in-out" />
                  </div>
-                 <h2 className="text-4xl md:text-5xl font-black text-foreground italic tracking-tighter mb-5 leading-[0.95]">
-                   Renueva <br/> tu equipo.
+                 <h2 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter mb-4 leading-tight">
+                   Vende el tuyo.
                  </h2>
-                 <p className="text-muted-foreground max-w-md text-lg font-medium leading-relaxed">
-                   Entrega tu iPhone actual como parte de pago y llévate el modelo nuevo por menos. 
-                   <span className="text-foreground font-bold"> Valoración garantizada.</span>
+                 <p className="text-gray-300 text-lg mb-10 max-w-md mx-auto font-medium leading-relaxed">
+                   Recibe una oferta instantánea por tu equipo actual y úsalo como parte de pago.
                  </p>
-               </div>
-
-               <div className="relative z-10 mt-10 space-y-5">
-                  <div className="grid gap-3">
-                    {[
-                      { title: "Cotización Instantánea", desc: "Recibe tu oferta al momento." },
-                      { title: "Revisión Express", desc: "Validación rápida en tienda." },
-                      { title: "Crédito Inmediato", desc: "Úsalo en tu nuevo iPhone." }
-                    ].map((step, i) => (
-                      <div key={i} className="flex items-start gap-4 p-4 rounded-2xl bg-secondary/40 border border-border/30 group-hover:bg-secondary/60 transition-colors">
-                         <div className="flex-shrink-0 w-7 h-7 rounded-full bg-foreground text-background flex items-center justify-center font-bold text-sm mt-0.5">
-                           {i + 1}
-                         </div>
-                         <div>
-                            <h4 className="text-foreground font-bold text-sm leading-none mb-1">{step.title}</h4>
-                            <p className="text-muted-foreground text-sm leading-tight">{step.desc}</p>
-                         </div>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  <Link href="/sell" className="block w-full pt-4">
-                    <Button className="w-full h-14 rounded-2xl bg-foreground text-background font-bold text-lg hover:bg-foreground/90 transition-all shadow-lg hover:shadow-xl hover:scale-[1.01] flex items-center justify-between px-6 group/btn relative overflow-hidden">
-                       <span className="relative z-10">Cotizar ahora</span>
-                       <ArrowRight className="w-5 h-5 relative z-10 group-hover/btn:translate-x-1 transition-transform" />
-                    </Button>
-                  </Link>
+                 
+                 <Link href="/sell" className="w-full max-w-md">
+                   <Button 
+                      className="w-full h-16 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/20 text-white font-bold text-lg shadow-lg hover:bg-green-500 hover:border-green-400 hover:text-white transition-all duration-300 group/btn relative overflow-hidden"
+                   >
+                     <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                     <span className="relative z-10 flex items-center justify-center gap-3">
+                       <div className="relative w-6 h-6 flex items-center justify-center">
+                          <Wallet size={24} className="absolute transition-all duration-300 group-hover/btn:opacity-0 group-hover/btn:translate-y-2" />
+                          <Banknote size={24} className="absolute text-white opacity-0 translate-y-2 transition-all duration-300 group-hover/btn:opacity-100 group-hover/btn:translate-y-0" />
+                       </div>
+                       Cotizar Gratis Ahora
+                     </span>
+                   </Button>
+                 </Link>
                </div>
             </div>
 
