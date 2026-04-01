@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, LayoutGrid, Compass } from "lucide-react"; // Agregué Compass
+import { ArrowRight, LayoutGrid, Compass } from "lucide-react";
 import ProductCard from "@/components/landing/product-card";
 import { Button } from "@/components/ui/button";
 
@@ -15,7 +15,8 @@ export function FeaturedProducts({ products }: FeaturedProductsProps) {
   const displayProducts = products ? products.slice(0, 4) : [];
 
   return (
-    <section className="py-24 bg-background relative overflow-hidden border-t border-border">
+    // 📱 Ajuste: Reducimos el py-24 a py-12 en móviles
+    <section className="py-12 md:py-24 bg-background relative overflow-hidden border-t border-border">
       
       {/* Fondo técnico sutil */}
       <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
@@ -25,17 +26,20 @@ export function FeaturedProducts({ products }: FeaturedProductsProps) {
       <div className="container mx-auto px-4 md:px-6 relative">
         
         {/* --- HEADER SECCIÓN --- */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 mb-8 md:mb-12">
             <div>
-                <div className="flex items-center gap-2 mb-3">
-                    <span className="h-1.5 w-1.5 bg-blue-600 rounded-full animate-pulse" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-600">
+                {/* 📱 Ajuste: Quitamos el punto y mejoramos el subtítulo */}
+                <div className="flex items-center gap-3 mb-2">
+                    <span className="hidden md:block h-[2px] w-6 bg-blue-600 rounded-full" />
+                    <span className="text-[10px] md:text-xs font-black uppercase tracking-[0.2em] md:tracking-[0.3em] text-blue-600">
                         Colección Selecta
                     </span>
                 </div>
-                <h2 className="text-4xl md:text-5xl font-black text-foreground tracking-tighter leading-tight">
-                    Novedades <br/>
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
+                
+                {/* 📱 Ajuste: Bajamos a text-3xl en móvil y controlamos el salto de línea */}
+                <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-foreground tracking-tighter leading-tight">
+                    Novedades{" "}
+                    <span className="block md:inline mt-1 md:mt-0 text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
                         Destacadas
                     </span>
                 </h2>
@@ -61,7 +65,7 @@ export function FeaturedProducts({ products }: FeaturedProductsProps) {
 
         {/* --- GRID DE PRODUCTOS (SOLO 4) --- */}
         {displayProducts.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8">
                 {displayProducts.map((product, index) => (
                     <ProductCard key={product.id} product={product} index={index} />
                 ))}
@@ -74,9 +78,9 @@ export function FeaturedProducts({ products }: FeaturedProductsProps) {
         )}
 
         {/* Botón móvil (Solo aparece en celular) */}
-        <div className="mt-12 md:hidden flex justify-center">
+        <div className="mt-8 md:hidden flex justify-center">
             <Link href="/catalogo" className="w-full">
-                <Button className="w-full h-14 rounded-xl bg-foreground text-background font-bold uppercase tracking-wide shadow-lg">
+                <Button className="w-full h-12 rounded-xl bg-foreground text-background font-bold uppercase tracking-wide shadow-lg">
                     Explorar Todo
                     <ArrowRight size={18} className="ml-2" />
                 </Button>

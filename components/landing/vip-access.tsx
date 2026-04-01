@@ -6,7 +6,7 @@ import { Crown, ArrowUpRight, Sparkles } from "lucide-react";
 
 export function VipAccessBanner() {
   return (
-    <div className="relative h-full min-h-[400px] md:min-h-full rounded-[2.5rem] overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 p-8 flex flex-col justify-between group cursor-pointer shadow-2xl shadow-blue-900/20 border border-white/10">
+    <div className="relative h-full min-h-[400px] md:min-h-full rounded-[2.5rem] overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 p-8 flex flex-col justify-between group cursor-pointer shadow-2xl shadow-blue-900/20 border border-black/5 dark:border-white/10">
        
        {/* Decoración de fondo */}
        <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
@@ -15,10 +15,10 @@ export function VipAccessBanner() {
        
        {/* Header del Card */}
        <div className="relative z-10 flex justify-between items-start">
-         <div className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-white/20 shadow-inner group-hover:scale-110 transition-transform duration-500">
-            <Crown size={28} className="fill-white/20" />
+         <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-white/20 shadow-inner group-hover:scale-110 transition-transform duration-500">
+            <Crown size={28} className="fill-white/40" />
          </div>
-         <span className="px-3 py-1 rounded-full bg-black/20 text-white text-[10px] font-black uppercase tracking-widest border border-white/10">
+         <span className="px-3 py-1 rounded-full bg-black/30 text-white text-[10px] font-black uppercase tracking-widest border border-white/10">
             Membresía Gratis
          </span>
        </div>
@@ -31,15 +31,15 @@ export function VipAccessBanner() {
              CLUB V.I.P.
            </span>
          </h4>
-         <p className="text-blue-100/90 text-sm font-medium leading-relaxed max-w-[240px]">
+         <p className="text-blue-50 text-sm font-medium leading-relaxed max-w-[240px]">
            Sé el primero en enterarte de los "Drops" de iPhone 15, ofertas flash y recibe regalos exclusivos en tu cumpleaños.
          </p>
        </div>
 
-       {/* Botón */}
+       {/* Botón (Adaptado a Dark Mode) */}
        <div className="relative z-10">
          <Link href="/auth/register">
-            <Button className="w-full h-14 rounded-xl bg-white text-blue-700 hover:bg-blue-50 font-black text-base justify-between group/btn shadow-lg shadow-black/10 transition-all hover:scale-[1.02]">
+            <Button className="w-full h-14 rounded-xl bg-white dark:bg-zinc-900 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-zinc-800 font-black text-base justify-between group/btn shadow-lg transition-all hover:scale-[1.02] border border-transparent dark:border-white/10">
                <span className="flex items-center gap-2">
                  <Sparkles size={18} className="text-yellow-500 fill-yellow-500" /> Unirme Ahora
                </span>
