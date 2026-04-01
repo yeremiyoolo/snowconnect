@@ -48,8 +48,7 @@ export default async function AddressesPage() {
                         Esta información se usará para tus envíos en Santiago y RD.
                     </DialogDescription>
                 </DialogHeader>
-                <form action={addAddress} className="space-y-4 pt-4">
-                    <div className="grid grid-cols-2 gap-4">
+<form action={async (formData) => { await addAddress(formData); }} className="space-y-4 pt-4">                    <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label>Nombre de la Ubicación</Label>
                             <Input name="label" placeholder="Ej: Casa, Oficina" required />
