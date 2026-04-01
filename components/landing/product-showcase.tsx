@@ -1,6 +1,6 @@
 "use client";
 
-import { ProductCard } from "./product-card";
+import ProductCard from "./product-card";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
