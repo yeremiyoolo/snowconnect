@@ -97,13 +97,13 @@ export default async function AdminOfertasFlashPage() {
                           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{offer.producto.marca}</p>
                         </div>
                         <div className="flex gap-1 shrink-0">
-                          <form action={handleToggle}>
-                            <Button type="submit" variant="ghost" size="icon" className="rounded-full hover:bg-secondary">
+<form action={async () => { await handleToggle(); }}>
+                              <Button type="submit" variant="ghost" size="icon" className="rounded-full hover:bg-secondary">
                               {offer.isActive ? <ToggleRight className="text-orange-500 w-6 h-6" /> : <ToggleLeft className="text-muted-foreground w-6 h-6" />}
                             </Button>
                           </form>
-                          <form action={handleDelete}>
-                            <Button type="submit" variant="ghost" size="icon" className="rounded-full hover:bg-red-50 text-muted-foreground hover:text-red-500">
+<form action={async () => { await handleDelete(); }}>
+                              <Button type="submit" variant="ghost" size="icon" className="rounded-full hover:bg-red-50 text-muted-foreground hover:text-red-500">
                               <Trash2 size={18} />
                             </Button>
                           </form>
