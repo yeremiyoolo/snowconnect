@@ -55,11 +55,10 @@ export async function PUT(
       data: {
         marca: body.marca,
         modelo: body.modelo,
-        color: body.color,
+        // 🍎 Eliminados 'color' y 'ram' porque pertenecen a las tablas de variantes y specs
         imei: body.imei,
         estado: body.estado,
         almacenamiento: body.almacenamiento,
-        ram: body.ram,
         precioCompra: pCompra,
         precioVenta: pVenta,
         margen: margen,
