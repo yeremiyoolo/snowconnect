@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, ShoppingCart, ArrowRightLeft, Check, Heart, Plus } from "lucide-react";
 import { useCompare } from "@/context/compare-context";
 import { useWishlist } from "@/context/wishlist-context"; // <--- Importar Wishlist
-import { useCartStore } from "@/lib/store"; // <--- Importar Carrito
+import { useCart } from "@/hooks/use-cart";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast"; // <--- Para notificaciones
@@ -29,7 +29,7 @@ interface ProductGridProps {
 export function ProductGrid({ productos }: ProductGridProps) {
   const { selectedIds, toggleCompare } = useCompare();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
-  const { addItem } = useCartStore();
+  const { addItem } = useCart();
   const { toast } = useToast();
 
   const handleAddToCart = (e: React.MouseEvent, prod: any, imagen: string) => {
@@ -37,11 +37,11 @@ export function ProductGrid({ productos }: ProductGridProps) {
     e.stopPropagation();
 addItem({
   id: prod.id,
-  name: `${prod.marca} ${prod.modelo}`, // Cambiamos 'name' por 'nombre'
+  nombre: `${prod.marca} ${prod.modelo}`,
   price: prod.precioVenta,
   image: imagen,
   quantity: 1
-});
+} as any);
     toast({ title: "🛍️ Agregado al carrito", description: `${prod.modelo} listo para comprar.` });
   };
 
