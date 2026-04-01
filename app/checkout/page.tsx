@@ -54,12 +54,10 @@ export default function CheckoutPage() {
     try {
       const result = await createOrder({
         userId: (session.user as any).id,
-        items: items.map(i => ({ 
-          id: i.id, 
-          quantity: i.quantity,
-          variantId: i.variantId,
-          colorName: i.color 
-        })),
+      items: items.map(i => ({
+  id: i.id, 
+  quantity: i.quantity
+})),
         shippingDetails: {
           name: formData.name,
           phone: formData.phone, // 🔥 Este dato irá a la nueva columna 'phone'
