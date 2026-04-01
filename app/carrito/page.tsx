@@ -77,8 +77,7 @@ export default function CarritoPage() {
                const nombre = item.name || "Producto Sin Nombre";
                const imagen = item.image || "/placeholder.png";
                const precio = Number(item.price || 0);
-               const specs = [item.color].filter(Boolean).join(" • ");
-
+const specs = "";
                return (
                  <div 
                    key={item.id} 
