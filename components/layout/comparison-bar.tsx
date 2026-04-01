@@ -60,7 +60,7 @@ export function ComparisonBar() {
                     
                     <div className="relative w-10 h-10 md:w-12 md:h-12">
                         <Image 
-                          src={item.imagen || item.image || "/placeholder.png"} 
+src={item.image || "/placeholder.png"}
                           alt={item.modelo || item.name || "Equipo"} 
                           fill 
                           className="object-contain drop-shadow-xl group-hover:scale-110 transition-transform duration-500"
