@@ -17,7 +17,7 @@ export function ProductShowcase({ products }: ProductShowcaseProps) {
       </div>
     );
   }
-
+  
   return (
     <section className="py-12 px-6 max-w-[1440px] mx-auto">
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
