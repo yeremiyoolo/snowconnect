@@ -21,7 +21,7 @@ export default async function NotificationsPage() {
   // 1. Obtener configuración real o usar valores por defecto
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
-    include: { notifications: true }
+    include: { notifications: true } 
   });
 
   // Valores por defecto si el usuario es nuevo
