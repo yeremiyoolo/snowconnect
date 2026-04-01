@@ -206,13 +206,13 @@ export default async function AdminQuotesPage({ searchParams }: QuotesPageProps)
 
                   {quote.status === "PENDING" && (
                     <div className="flex flex-1 gap-2">
-                      <form action={handleApprove} className="flex-1">
-                        <Button type="submit" variant="outline" className="w-full border-green-200 text-green-600 hover:bg-green-50 font-black h-12 rounded-xl text-[10px] uppercase tracking-widest gap-1.5 px-0">
+<form action={async () => { await handleApprove(); }} className="flex-1">
+                          <Button type="submit" variant="outline" className="w-full border-green-200 text-green-600 hover:bg-green-50 font-black h-12 rounded-xl text-[10px] uppercase tracking-widest gap-1.5 px-0">
                           <CheckCircle2 size={16} /> Aceptar
                         </Button>
                       </form>
-                      <form action={handleReject} className="flex-1">
-                        <Button type="submit" variant="outline" className="w-full border-red-200 text-red-600 hover:bg-red-50 font-black h-12 rounded-xl text-[10px] uppercase tracking-widest gap-1.5 px-0">
+<form action={async () => { await handleReject(); }} className="flex-1">
+                          <Button type="submit" variant="outline" className="w-full border-red-200 text-red-600 hover:bg-red-50 font-black h-12 rounded-xl text-[10px] uppercase tracking-widest gap-1.5 px-0">
                           <XCircle size={16} /> Rechazar
                         </Button>
                       </form>
