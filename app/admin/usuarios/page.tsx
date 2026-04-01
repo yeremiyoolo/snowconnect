@@ -105,7 +105,7 @@ export default async function AdminUsuariosPage({ searchParams }: UsersPageProps
                       <div>
                         <p className="font-black text-foreground uppercase italic tracking-tight flex items-center gap-2">
                           {user.name || "Usuario Web"}
-                          {isVIP && <Award size={14} className="text-primary fill-primary" title="Cliente VIP" />}
+{isVIP && <span title="Cliente VIP"><Award size={14} className="text-primary fill-primary" /></span>}
                         </p>
                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">
                           Miembro desde {new Date(user.createdAt).getFullYear()}
