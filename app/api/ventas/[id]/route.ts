@@ -31,8 +31,7 @@ export async function PUT(
       return NextResponse.json({ message: "Venta no encontrada" }, { status: 404 });
     }
 
-    const nuevoMargen = parseFloat(precioVenta) - ventaOriginal.costo;
-
+const nuevoMargen = parseFloat(precioVenta) - (ventaOriginal.costo || 0);
     const ventaActualizada = await prisma.venta.update({
       where: { id },
       data: {
