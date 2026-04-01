@@ -58,12 +58,12 @@ export function ProductView({ product }: ProductViewProps) {
   const handleAddToCart = () => {
     setIsAdding(true);
     cart.addItem({
-      id: product.id,
-      modelo: product.modelo,
-      precio: priceValue,
-      imagen: images[0],
-      cantidad: 1,
-    });
+  id: product.id,
+  nombre: `${product.marca} ${product.modelo}`,
+  price: priceValue,
+  image: images[0],
+  quantity: 1
+} as any);
     toast({ title: "Agregado al carrito", className: "bg-green-600 text-white" });
     setTimeout(() => setIsAdding(false), 800);
   };
