@@ -93,8 +93,8 @@ export default async function AdminCuponesPage() {
                             {coupon.isActive ? <ToggleRight className="text-primary w-6 h-6" /> : <ToggleLeft className="text-muted-foreground w-6 h-6" />}
                           </Button>
                         </form>
-                        <form action={handleDelete}>
-                          <Button type="submit" variant="ghost" size="icon" className="rounded-full hover:bg-red-50 text-muted-foreground hover:text-red-500 h-10 w-10">
+<form action={async () => { await handleDelete(); }}>
+                            <Button type="submit" variant="ghost" size="icon" className="rounded-full hover:bg-red-50 text-muted-foreground hover:text-red-500 h-10 w-10">
                             <Trash2 size={20} />
                           </Button>
                         </form>
