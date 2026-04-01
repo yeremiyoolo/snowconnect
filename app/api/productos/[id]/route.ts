@@ -61,7 +61,6 @@ export async function PUT(
         almacenamiento: body.almacenamiento,
         precioCompra: pCompra,
         precioVenta: pVenta,
-        margen: margen,
         descripcion: body.descripcion,
         fotosJson: JSON.stringify(body.fotos || [])
       }
