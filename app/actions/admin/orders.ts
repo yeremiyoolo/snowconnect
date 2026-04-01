@@ -66,22 +66,21 @@ export async function completeOrderSale(orderId: string) {
       });
     }
 
-    // 3. REGISTRO AUTOMÁTICO EN LA SECCIÓN DE VENTAS
-    // Esto se envuelve en un try-catch por si tu tabla de ventas exige campos extra, 
-    // así no se rompe la orden si falta algo.
+    // 3. REGISTRO AUTOMÁTICO EN LA SECCIÓN DE VENTAS (CORREGIDO)
     try {
-      await prisma.venta.create({
-        data: {
-          total: order.total,
-          metodoPago: order.carrier || "TRANSFERENCIA", // Toma el método que eligió el cliente
-          estado: "COMPLETADA",
-          notas: `Venta Web Automática - Orden #${order.orderNumber || order.id.slice(-6)}`,
-          // Si tu modelo de ventas requiere conectar el producto o cliente, 
-          // puedes agregar esos campos aquí más adelante.
-        }
-      });
+      // Registramos una venta por cada item en la orden (ya que Venta pide productoId)
+      for (const item of order.items) {
+        await prisma.venta.create({
+          data: {
+            precioVenta: item.price,
+            productoId: item.productId,
+            userId: order.userId,
+            notas: `Venta Web - Orden #${order.orderNumber || order.id.slice(-6)}`,
+          }
+        });
+      }
     } catch (e) {
-      console.warn("Aviso: No se pudo registrar en la tabla Venta (revisa el schema de Venta), pero la orden web fue completada.", e);
+      console.warn("Aviso: No se pudo registrar en la tabla Venta, pero la orden web fue completada.", e);
     }
 
     revalidatePath("/admin/ordenes");
