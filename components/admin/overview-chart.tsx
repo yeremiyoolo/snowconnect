@@ -62,7 +62,7 @@ export function OverviewChart({ weekly, monthly, annual }: OverviewChartProps) {
             fontWeight={900}
             tickLine={false}
             axisLine={false}
-            tick={{ textTransform: 'uppercase' }}
+tick={{ fontSize: 10 }}
             dy={10}
           />
           <YAxis
