@@ -118,8 +118,7 @@ export default async function VentasPage() {
                   // Analizamos las notas por si tiene detalles extra de la automatización
                   let detalles = venta.notas || "";
                   let clienteName = venta.user?.name || "Cliente General";
-                  let metodo = venta.metodoPago || "Automático";
-
+let metodo = "Automático";
                   if (detalles.includes("Cliente:")) {
                     const partes = detalles.split("|");
                     metodo = partes[0].replace("Pago: ", "").trim();
