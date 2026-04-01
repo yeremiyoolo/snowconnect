@@ -7,10 +7,7 @@ import {
   ArrowLeft, ShieldCheck, Truck, CreditCard, 
   Cpu, Smartphone, Database, CheckCircle2 
 } from "lucide-react";
-// Eliminé Badge si no lo usas, o mantenlo si lo tienes creado
-// import { Badge } from "@/components/ui/badge"; 
 
-// Función auxiliar para parsear fotos
 const getImages = (jsonString: string | null): string[] => {
   if (!jsonString) return [];
   try {
@@ -21,19 +18,21 @@ const getImages = (jsonString: string | null): string[] => {
   }
 };
 
-// ⚠️ CAMBIO IMPORTANTE: params es una Promesa
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
 export default async function ProductPage(props: PageProps) {
-  // ⚠️ DESEMPAQUETAR PARAMS CON AWAIT
   const params = await props.params;
 
-  // 1. Fetch de datos usando el ID ya resuelto
+  // 1. Fetch de datos INCLUYENDO specs y variantes
   const producto = await prisma.producto.findUnique({
     where: { id: params.id },
-    include: { user: { select: { name: true } } } 
+    include: { 
+      user: { select: { name: true } },
+      specs: true,       // <-- Trae la RAM y demás specs
+      variantes: true    // <-- Trae los colores disponibles
+    } 
   });
 
   if (!producto) {
@@ -48,10 +47,10 @@ export default async function ProductPage(props: PageProps) {
       <header className="sticky top-0 z-40 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-b border-gray-100 dark:border-white/10">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link 
-            href="/" 
+            href="/admin/productos" 
             className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
-            <ArrowLeft className="w-4 h-4" /> Volver al catálogo
+            <ArrowLeft className="w-4 h-4" /> Volver al inventario
           </Link>
           <div className="font-bold text-sm hidden md:block opacity-50">
             {producto.marca} / {producto.modelo}
@@ -97,7 +96,7 @@ export default async function ProductPage(props: PageProps) {
                   <Database className="w-4 h-4" />
                   <span className="text-xs font-bold uppercase">Almacenamiento</span>
                 </div>
-                <p className="text-lg font-bold">{producto.almacenamiento}</p>
+                <p className="text-lg font-bold">{producto.almacenamiento || "N/A"}</p>
               </div>
               
               <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-transparent hover:border-gray-200 transition-colors">
@@ -105,7 +104,8 @@ export default async function ProductPage(props: PageProps) {
                   <Cpu className="w-4 h-4" />
                   <span className="text-xs font-bold uppercase">Memoria RAM</span>
                 </div>
-                <p className="text-lg font-bold">{producto.ram}</p>
+                {/* 🍎 CORRECCIÓN DE RAM AQUÍ */}
+                <p className="text-lg font-bold">{producto.specs?.ram || "N/A"}</p>
               </div>
 
               <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-transparent hover:border-gray-200 transition-colors">
@@ -113,7 +113,8 @@ export default async function ProductPage(props: PageProps) {
                   <Smartphone className="w-4 h-4" />
                   <span className="text-xs font-bold uppercase">Color</span>
                 </div>
-                <p className="text-lg font-bold">{producto.color}</p>
+                {/* 🍎 CORRECCIÓN DE COLOR AQUÍ */}
+                <p className="text-lg font-bold">{producto.variantes?.[0]?.color || "Estándar"}</p>
               </div>
 
               <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-transparent hover:border-gray-200 transition-colors">
