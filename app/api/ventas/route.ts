@@ -45,7 +45,7 @@ export async function POST(request: Request) {
 
       // B. Calcular valores
       const precioVenta = producto.precioVenta;
-      const costo = producto.precioCompra;
+const costo = producto.precioCompra || 0;
       const margen = precioVenta - costo; // <--- CÁLCULO DE GANANCIA
 
       // C. Crear la Venta
