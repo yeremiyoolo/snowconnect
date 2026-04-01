@@ -88,8 +88,8 @@ export default async function AdminCuponesPage() {
                         </h3>
                       </div>
                       <div className="flex gap-1.5 shrink-0 ml-2">
-                        <form action={handleToggle}>
-                          <Button type="submit" variant="ghost" size="icon" className="rounded-full hover:bg-secondary h-10 w-10">
+<form action={async () => { await handleToggle(); }}>
+                            <Button type="submit" variant="ghost" size="icon" className="rounded-full hover:bg-secondary h-10 w-10">
                             {coupon.isActive ? <ToggleRight className="text-primary w-6 h-6" /> : <ToggleLeft className="text-muted-foreground w-6 h-6" />}
                           </Button>
                         </form>
