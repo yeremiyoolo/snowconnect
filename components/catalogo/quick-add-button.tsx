@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react"; import { useSession } from "next-auth/react"; import { useRouter } from "next/navigation";
-import { useCartStore } from "@/lib/store/cart"; import { Button } from "@/components/ui/button"; import { Plus, Loader2, LogIn, X, ShieldAlert } from "lucide-react";
+import { useCart } from "@/hooks/use-cart"; import { Button } from "@/components/ui/button"; import { Plus, Loader2, LogIn, X, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast"; import { cn } from "@/lib/utils";
 
 export function QuickAddButton({ product, className }: { product: any, className?: string }) {
-  const { data: session } = useSession(); const router = useRouter(); const addItem = useCartStore((state) => state.addItem); const { toast } = useToast();
+  const { data: session } = useSession(); const router = useRouter(); const addItem = useCart((state) => state.addItem); const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false); const [showModal, setShowModal] = useState(false);
 
   const handleQuickAdd = async (e: React.MouseEvent) => {
@@ -15,7 +15,7 @@ export function QuickAddButton({ product, className }: { product: any, className
     if (!session) { setShowModal(true); return; }
 
     setIsLoading(true); await new Promise(r => setTimeout(r, 400));
-    addItem({ id: product.id, name: `${product.marca} ${product.modelo}`, price: product.precioVenta, image: product.imagen || "/placeholder.png", cantidad: 1 });
+    addItem({ id: product.id, name: `${product.marca} ${product.modelo}`, price: product.precioVenta, image: product.imagen || "/placeholder.png", quantity: 1 });
     toast({ title: "¡Agregado!", className: "bg-blue-600 text-white border-none h-10 px-4 shadow-lg" });
     setIsLoading(false);
   };
