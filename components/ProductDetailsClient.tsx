@@ -40,7 +40,7 @@ export default function ProductDetailsClient({ product }: { product: ClientProdu
       image: safeImages[mainImage],
       quantity: 1, // Cantidad en inglés
     });
-    
+     
     toast.success("¡Añadido a la bolsa! ❄️");
     router.push("/checkout"); // Lo mandamos de una a pagar
   };
