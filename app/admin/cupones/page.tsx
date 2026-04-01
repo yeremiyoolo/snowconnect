@@ -51,7 +51,7 @@ export default async function AdminCuponesPage() {
 
         {/* LADO DERECHO: LISTA (8 columnas en XL) */}
         <div className="xl:col-span-8 space-y-8">
-          <h2 className="text-xl font-black uppercase italic tracking-tighter mb-5 ml-4 text-foreground/70">Inventario de Cupones ({coupons.length})</h2>
+          <h2 className="text-xl font-black uppercase italic tracking-tighter mb-5 ml-4 text-foreground/70">Inventario de Cupones({coupons.length})</h2>
           
           {coupons.length === 0 ? (
             <div className="h-64 flex flex-col items-center justify-center border-2 border-dashed border-border rounded-[3rem] bg-card/30 opacity-60">
