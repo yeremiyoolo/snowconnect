@@ -17,7 +17,7 @@ export function QuickAddButton({ product, className }: { product: any, className
     setIsLoading(true); await new Promise(r => setTimeout(r, 400));
     addItem({ id: product.id, name: `${product.marca} ${product.modelo}`, price: product.precioVenta, image: product.imagen || "/placeholder.png", quantity: 1 });
     toast({ title: "¡Agregado!", className: "bg-blue-600 text-white border-none h-10 px-4 shadow-lg" });
-    setIsLoading(false);
+    setIsLoading(false); 
   };
 
   return (
@@ -25,7 +25,7 @@ export function QuickAddButton({ product, className }: { product: any, className
       <Button size="icon" onClick={handleQuickAdd} disabled={isLoading || product.estado === "VENDIDO"} className={cn("rounded-full h-10 w-10 shadow-lg transition-all border-none ring-0 outline-none", product.estado === "VENDIDO" ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-white text-blue-600 hover:bg-blue-600 hover:text-white hover:scale-110", className)}>
         {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-5 w-5 font-bold" />}
       </Button>
-
+  
       {/* --- MODAL DE LOGIN (SOLO SI NO HAY SESIÓN) --- */}
       {showModal && (
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
