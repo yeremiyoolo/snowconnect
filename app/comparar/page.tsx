@@ -49,7 +49,7 @@ export default function ComparePage() {
       name: `${item.marca || ''} ${item.modelo}`.trim(), 
       price: item.precio || item.precioVenta, 
       image: item.imagen || item.image, 
-      cantidad: 1 
+      quantity: 1 
     });
     toast.success(`${item.modelo} agregado al carrito`);
   };
