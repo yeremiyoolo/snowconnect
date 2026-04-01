@@ -39,7 +39,6 @@ export default function ProductDetailsClient({ product }: { product: ClientProdu
       price: product.precio,
       image: safeImages[mainImage],
       quantity: 1, // Cantidad en inglés
-      color: selectedColor.nombre // Pasamos el color que eligió
     });
     
     toast.success("¡Añadido a la bolsa! ❄️");
