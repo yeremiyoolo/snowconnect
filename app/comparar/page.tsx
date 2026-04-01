@@ -105,13 +105,13 @@ export default function ComparePage() {
                       </button>
 
                       <div className="relative h-48 w-full mb-6">
-                         <Image src={item.imagen || item.image || "/placeholder.png"} alt={item.modelo || "Equipo"} fill className="object-contain drop-shadow-2xl" />
+<Image src={item.image || "/placeholder.png"} alt={item.modelo || "Equipo"} fill className="object-contain drop-shadow-2xl" />
                       </div>
                       
                       <span className="text-xs font-bold text-blue-500 tracking-widest uppercase mb-1">{item.marca}</span>
                       <h3 className="text-xl font-black text-white leading-tight mb-2 line-clamp-2">{item.modelo}</h3>
                       <p className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-zinc-100 to-zinc-500 mb-6">
-                          {formatPrice(item.precio || item.precioVenta)}
+{formatPrice(item.price || 0)}
                       </p>
 
                       <Button 
