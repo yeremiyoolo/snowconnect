@@ -1,10 +1,12 @@
 'use server'
 
-import { prisma } from "@/lib/prisma" // Ajusta la ruta a tu cliente de prisma
-import { auth } from "@/auth" // O tu método de obtener la sesión del usuario
+import { prisma } from "@/lib/prisma"
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export async function validateCoupon(code: string) {
-  const session = await auth(); // Asumiendo que usas NextAuth/Auth.js
+  // Obtenemos la sesión usando el método correcto para tu proyecto
+  const session = await getServerSession(authOptions);
   
   if (!session?.user?.id) {
     return { error: "Debes iniciar sesión para usar un cupón." }
