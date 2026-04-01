@@ -72,8 +72,7 @@ export default async function MisPedidosPage() {
                       </Badge>
                     </div>
                     
-                    <p className="text-sm text-gray-500">{venta.producto.almacenamiento} • {venta.producto.color}</p>
-                    
+<p className="text-sm text-gray-500">{venta.producto.almacenamiento}</p>                    
                     <div className="flex items-center justify-center sm:justify-start gap-4 text-xs text-gray-400 font-medium pt-2">
                       <span className="flex items-center gap-1"><Calendar size={14}/> {new Date(venta.createdAt).toLocaleDateString()}</span>
                       <span className="text-gray-300">|</span>
