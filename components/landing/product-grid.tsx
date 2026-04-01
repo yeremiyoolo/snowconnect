@@ -35,14 +35,13 @@ export function ProductGrid({ productos }: ProductGridProps) {
   const handleAddToCart = (e: React.MouseEvent, prod: any, imagen: string) => {
     e.preventDefault();
     e.stopPropagation();
-    addItem({
-      id: prod.id,
-      modelo: prod.modelo,
-      marca: prod.marca,
-      precio: prod.precioVenta,
-      imagen: imagen,
-      cantidad: 1
-    });
+addItem({
+  id: prod.id,
+  name: `${prod.marca} ${prod.modelo}`, // Cambiamos 'name' por 'nombre'
+  price: prod.precioVenta,
+  image: imagen,
+  quantity: 1
+});
     toast({ title: "🛍️ Agregado al carrito", description: `${prod.modelo} listo para comprar.` });
   };
 
