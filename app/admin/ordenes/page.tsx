@@ -207,13 +207,13 @@ export default async function AdminOrdersPage({ searchParams }: OrdersPageProps)
                           </Button>
                         </a>
                         <div className="flex gap-2 w-full">
-                          <form action={handleComplete} className="flex-1">
-                            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-white font-black h-12 rounded-xl text-[10px] uppercase tracking-widest shadow-lg gap-1.5">
+<form action={async () => { await handleComplete(); }} className="flex-1">
+                              <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-white font-black h-12 rounded-xl text-[10px] uppercase tracking-widest shadow-lg gap-1.5">
                               <CheckCircle2 size={16} /> Aprobar
                             </Button>
                           </form>
-                          <form action={handleCancel} className="flex-1">
-                            <Button type="submit" variant="outline" className="w-full border-red-200 text-red-600 hover:bg-red-50 font-black h-12 rounded-xl text-[10px] uppercase tracking-widest gap-1.5">
+<form action={async () => { await handleCancel(); }} className="flex-1">
+                              <Button type="submit" variant="outline" className="w-full border-red-200 text-red-600 hover:bg-red-50 font-black h-12 rounded-xl text-[10px] uppercase tracking-widest gap-1.5">
                               <XCircle size={16} /> Cancelar
                             </Button>
                           </form>
