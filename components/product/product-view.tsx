@@ -5,7 +5,7 @@ import Image from "next/image";
 import { ShoppingCart, Heart, ArrowLeftRight, Star, ShieldCheck, Truck, RotateCcw, Smartphone, HardDrive, Battery, Cpu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/use-cart";
-import { useWishlist } from "@/hooks/use-wishlist";
+import { useWishlistStore } from "@/lib/store/wishlist";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -16,7 +16,7 @@ interface ProductViewProps {
 export function ProductView({ product }: ProductViewProps) {
   const { toast } = useToast();
   const cart = useCart();
-  const wishlist = useWishlist();
+  const wishlist = useWishlistStore();
   
   const [selectedImage, setSelectedImage] = useState(0);
   const [isAdding, setIsAdding] = useState(false);
