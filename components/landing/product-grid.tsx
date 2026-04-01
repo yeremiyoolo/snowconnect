@@ -35,7 +35,7 @@ export function ProductGrid({ productos }: ProductGridProps) {
   const handleAddToCart = (e: React.MouseEvent, prod: any, imagen: string) => {
     e.preventDefault();
     e.stopPropagation();
-addItem({
+addItem({ 
   id: prod.id,
   nombre: `${prod.marca} ${prod.modelo}`,
   price: prod.precioVenta,
