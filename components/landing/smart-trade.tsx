@@ -139,4 +139,4 @@ export function SmartTradeSection() {
       </div>
     </section>
   );
-}
+} 
